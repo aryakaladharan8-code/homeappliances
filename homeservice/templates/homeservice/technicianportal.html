@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Technician Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background:#f5f7fc; font-family:'Inter', sans-serif; }
+        .box { max-width:600px; margin:60px auto; background:#fff; padding:30px; border-radius:12px; box-shadow:0 4px 14px rgba(0,0,0,0.08); }
+        h3 { font-weight:700; color:#2d347d; }
+    </style>
+</head>
+<body>
+<div class="box text-center">
+    <h3 class="mb-3">Technician Portal</h3>
+    <p class="text-muted">If you're a registered technician, log in to view and manage your assigned service jobs.</p>
+
+    <a href="{% url 'technicianlogin' %}" class="btn btn-primary px-4 mt-3">Technician Login</a>
+    <a href="{% url 'techniciansignup' %}" class="btn btn-outline-primary px-4 mt-3">Apply Now</a>
+
+    <p class="mt-4 text-muted small">
+        Apply to become a technician and get approved by admin.
+    </p>
+</div>
+</body>
+</html>

@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Technician Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    {% include 'homeservice/_dashboard_styles.html' %}
+    <style>
+        /* page-specific overrides for technician dashboard */
+        .sidebar { width:250px; background:white; border-right:1px solid #e5e7eb; padding:25px 18px; overflow-y:auto; scrollbar-width:thin; position:sticky; top:0; height:100vh; }
+        .brand { font-size:22px; font-weight:700; color:#2d347d; }
+        .menu a { margin:8px 0; display:flex; align-items:center; gap:10px; padding:10px 12px; font-weight:600; color:#374151; text-decoration:none; border-radius:8px; background:#fff; border:1px solid #eef2f8; transition: all .18s ease; position:relative; }
+        .menu a svg { width:18px; height:18px; vertical-align:middle; fill:currentColor; opacity:0.9; }
+        .menu a::before { content:""; position:absolute; left:10px; top:50%; transform:translateY(-50%); width:0; height:36px; background:linear-gradient(180deg,#3b6be0,#2d347d); border-radius:8px; transition: width .18s ease; }
+        .menu a:hover, .menu a.active { background:linear-gradient(90deg,#f1f5ff,#c7d8ff); color:#2d347d; transform:translateY(-2px); box-shadow:0 6px 20px rgba(47,63,88,0.04); }
+        .menu a:hover::before, .menu a.active::before { width:4px; }
+
+        .side-item { display:block; padding:10px 14px; border-radius:10px; background:#ffffff; color:#556179; border:1px solid #eef2f8; font-weight:600; position:relative; transition: all .18s ease; }
+        .side-item svg { width:18px; height:18px; margin-right:8px; vertical-align:middle; fill:currentColor; opacity:0.9; }
+        .side-item::before { content:""; position:absolute; left:8px; top:50%; transform:translateY(-50%); width:0; height:36px; background:linear-gradient(180deg,#3b6be0,#2d347d); border-radius:8px; transition: width .18s ease; }
+        .side-item:hover, .side-item.active { background:linear-gradient(90deg,#f1f5ff,#c7d8ff); color:#2d347d; text-decoration:none; box-shadow:0 6px 20px rgba(47,63,88,0.04); transform:translateY(-2px); }
+        .side-item:hover::before, .side-item.active::before { width:4px; }
+        .side-item:hover svg, .side-item.active svg { color:#2d347d; opacity:1; }
+
+        /* stronger card styles for technician dashboard items */
+        .card-box { border-radius:12px; padding:28px; background:#ffffff; box-shadow:0 12px 30px rgba(13,38,77,0.06); }
+        .badge-status { padding:6px 10px; border-radius:6px; }
+        .rating-stars .star { color: #ddd; font-size: 16px; }
+        .rating-stars .star.filled { color: #ffc107; }
+        .table tbody tr:hover { background:#fbfcff; transform: translateY(-1px); }
+    </style>
+</head>
+
+<body>
+<div class="d-flex" style="min-height:100vh;">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <h4 class="brand mb-4">Technician Panel</h4>
+
+        <nav class="menu">
+            <a href="{% url 'techniciandashboard' %}" class="{% if active_page == 'dashboard' %}active{% endif %}">Dashboard</a>
+            <a href="{% url 'technician_ratings' %}" class="{% if active_page == 'ratings' %}active{% endif %}">Ratings</a>
+            <a href="{% url 'my_jobs' %}" class="{% if active_page == 'jobs' %}active{% endif %}">My Jobs</a>
+            <a href="{% url 'technician_payment' %}" class="{% if active_page == 'payment' %}active{% endif %}">Payment</a>
+            <a href="{% url 'technician_profile' %}" class="{% if active_page == 'profile' %}active{% endif %}">Profile</a>
+          
+            <a href="#" class="side-item text-decoration-none text-danger logout-trigger"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M16 17l5-5-5-5M21 12H9"></path></svg>Logout</a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <div class="flex-grow-1 p-4">
+        <div class="dashboard-card">
+
+            <h3>Welcome, {{ technician.name }} 👋</h3>
+            <p class="text-muted">Manage your jobs and profile here.</p>
+
+            {% if not technician.photo %}
+            <div class="alert alert-warning">
+                Please upload your profile photo in <a href="{% url 'technician_profile' %}">Profile</a>. This is required for users to recognize you when a job is assigned.
+            </div>
+            {% endif %}
+
+            <!-- Subscription Status -->
+            <div class="alert {% if technician.is_active %}alert-success{% else %}alert-danger{% endif %} mb-3">
+                <h5>Subscription Status: 
+                    {% if technician.is_active %}ACTIVE ✅{% else %}The subscription has already ended. It is deactivated now. ❌{% endif %}
+                </h5>
+                {% if technician.is_active and technician.subscription_expiry %}
+                    <p class="mb-0">Expires on {{ technician.subscription_expiry|date:"M d, Y" }}</p>
+                {% elif not technician.is_active %}
+                    <p class="mb-0">Pay ₹300 to continue. <a href="{% url 'technician_payment' %}" class="alert-link">Pay Now</a></p>
+                {% endif %}
+            </div>
+
+            <!-- Summary Cards -->
+            <div class="row g-3 my-3">
+                <div class="col-md-4">
+                    <div class="card-box text-center">
+                        <h4>{{ total_jobs }}</h4>
+                        <p class="text-muted">Total Jobs</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card-box text-center">
+                        <h4>{{ inprogress_jobs }}</h4>
+                        <p class="text-primary fw-bold">In Progress</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card-box text-center">
+                        <h4>{{ completed_jobs }}</h4>
+                        <p class="text-success fw-bold">Completed</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Available Jobs -->
+            {% if technician.is_active %}
+            <div class="card-box mt-4">
+                <h5 class="mb-3">Available Jobs</h5>
+
+                {% if available_jobs %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Customer</th>
+                            <th>Phone</th>
+                            <th>Service</th>
+                            <th>Problem</th>
+                            <th>Address</th>
+                            <th>Action</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for job in available_jobs %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>{{ job.user.first_name }}</td>
+                            <td>{{ job.user.customer.phone|default:"N/A" }}</td>
+                            <td>{{ job.service_type }}</td>
+                            <td>{{ job.problem_description }}</td>
+                            <td>{{ job.address }}</td>
+                            <td>
+                                <form method="post" action="{% url 'accept_job' job.id %}">
+                                    {% csrf_token %}
+                                    <button class="btn btn-success btn-sm">
+                                        Accept Job
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted">No available jobs right now.</p>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            {% if technician.is_active %}
+            <!-- Jobs Table -->
+            <div class="card-box mt-4">
+                <h5 class="mb-3">Assigned Jobs</h5>
+
+                {% if services %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Customer</th>
+                            <th>Phone</th>
+                            <th>Service</th>
+                            <th>Problem</th>
+                            <th>Address</th>
+                            <th>Status</th>
+                            <th>Amount</th>
+                            <th>Action</th>
+                        </tr>
+                        </thead>
+
+                        <tbody>
+                        {% for job in services %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>{{ job.user.first_name }}</td>
+                            <td>{{ job.user.customer.phone|default:"N/A" }}</td>
+                            <td>{{ job.service_type }}</td>
+                            <td>{{ job.problem_description }}</td>
+                            <td>{{ job.address }}</td>
+
+                            <td>
+                                {% if job.status == "assigned" %}
+                                <span class="badge-status bg-warning text-dark">Assigned</span>
+                                {% elif job.status == "completed" %}
+                                <span class="badge-status bg-success">Completed</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if job.service_amount %}
+                                ₹{{ job.service_amount }}
+                                {% else %}
+                                -
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if job.status == "assigned" %}
+                                <a href="{% url 'complete_job' job.id %}"
+                                   class="btn btn-primary btn-sm">
+                                    Complete Job
+                                </a>
+                                {% else %}
+                                -
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted">No jobs assigned yet.</p>
+                {% endif %}
+            </div>
+            {% endif %}
+
+        </div>
+    </div>
+</div>
+
+{% include 'homeservice/_logout_modal.html' %}
+
+</body>
+</html>

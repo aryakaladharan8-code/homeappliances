@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>My Jobs</title>
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+<style>
+    body { background:#f5f7fc; font-family:'Inter', sans-serif; }
+    .sidebar { min-height:100vh; background:white; border-right:1px solid #e5e7eb; padding:25px 18px; }
+    .brand { font-size:22px; font-weight:700; color:#2d347d; }
+    .menu a { margin:8px 0; display:block; padding:10px; font-weight:500; color:#374151; text-decoration:none; border-radius:6px; }
+    .menu a.active, .menu a:hover { background:#2d347d; color:white; }
+
+    /* Sidebar logout / nav item style (matching user dashboard) */
+    .side-item { display:block; padding:10px 14px; border-radius:10px; background:#ffffff; color:#556179; border:1px solid #eef2f8; font-weight:600; position:relative; transition: all .18s ease; }
+    .side-item svg { width:18px; height:18px; margin-right:8px; vertical-align:middle; fill:currentColor; opacity:0.9; }
+    .side-item::before { content:""; position:absolute; left:8px; top:50%; transform:translateY(-50%); width:0; height:36px; background:linear-gradient(180deg,#3b6be0,#2d347d); border-radius:8px; transition: width .18s ease; }
+    .side-item:hover, .side-item.active { background:linear-gradient(90deg,#f1f5ff,#c7d8ff); color:#2d347d; text-decoration:none; box-shadow:0 6px 20px rgba(47,63,88,0.04); transform:translateY(-2px); }
+    .side-item:hover::before, .side-item.active::before { width:4px; }
+    .side-item:hover svg, .side-item.active svg { color:#2d347d; opacity:1; }
+
+    .card-box { border-radius:12px; padding:20px; background:white; box-shadow:0 2px 8px rgba(0,0,0,0.05); }
+</style>
+</head>
+
+<body>
+<div class="container-fluid">
+<div class="row">
+
+    <!-- Sidebar -->
+    <aside class="col-md-3 col-lg-2 sidebar">
+        <h4 class="brand mb-4">Technician Panel</h4>
+        <nav class="menu">
+            <a href="{% url 'techniciandashboard' %}">Dashboard</a>
+            <a href="{% url 'technician_ratings' %}">Ratings</a>
+            <a href="{% url 'technician_myjobs' %}" class="active">My Jobs</a>
+            <a href="#">Notifications</a>
+            <a href="#">Profile</a>
+            <a href="#" class="side-item text-decoration-none text-danger logout-trigger"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M16 17l5-5-5-5M21 12H9"></path></svg>Logout</a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="col-md-9 col-lg-10 p-4">
+
+        <h3>Completed Jobs</h3>
+        <p class="text-muted">Jobs you have successfully completed</p>
+
+        <div class="card-box mb-3">
+            <h5>Total Earned: ₹ {{ total_earned }}</h5>
+        </div>
+
+        <div class="card-box">
+            {% if completed_jobs %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Customer Name</th>
+                            <th>Completed Date</th>
+                            <th>Amount Received</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for job in completed_jobs %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>{{ job.user.first_name|default:job.user.username }}</td>
+                            <td>{{ job.completed_at|date:"M d, Y" }}</td>
+                            <td>₹ {{ job.service_amount }}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted">No completed jobs yet.</p>
+            {% endif %}
+        </div>
+
+    </main>
+</div>
+</div>
+
+{% include 'homeservice/_logout_modal.html' %}
+</body>
+</html>

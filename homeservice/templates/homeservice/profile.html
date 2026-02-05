@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>User Profile</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    {% include 'homeservice/_dashboard_styles.html' %}
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #b9cceb 25%, #f8fafc 100%);
+            min-height: 100vh;
+        }
+
+        .profile-wrapper {
+            max-width: 700px;
+            margin: 70px auto;
+        }
+
+        .profile-card {
+            background: #ffffff;
+            border-radius: 20px;
+            padding: 45px;
+            box-shadow: 0 25px 60px rgba(15, 23, 42, 0.08);
+        }
+
+        .profile-title {
+            font-weight: 700;
+            color: #2d347d;
+            margin-bottom: 35px;
+        }
+
+        .label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #6b7280;
+            margin-bottom: 6px;
+        }
+
+        .value {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #111827;
+        }
+
+        .form-control {
+            border-radius: 12px;
+            padding: 10px 14px;
+        }
+
+        .form-control:focus {
+            border-color: #2d347d;
+            box-shadow: 0 0 0 3px rgba(45, 52, 125, 0.1);
+        }
+
+        .btn-primary {
+            background: linear-gradient(90deg, #3b6be0, #2d347d);
+            border: none;
+            border-radius: 12px;
+            padding: 10px 22px;
+            font-weight: 600;
+            box-shadow: 0 10px 25px rgba(59, 107, 224, 0.25);
+        }
+
+        .btn-success {
+            border-radius: 12px;
+            padding: 10px 22px;
+            font-weight: 600;
+        }
+
+        .btn-secondary {
+            border-radius: 12px;
+            padding: 10px 22px;
+            font-weight: 600;
+        }
+
+        .btn-outline-primary {
+            border-radius: 12px;
+            padding: 10px 22px;
+            font-weight: 600;
+        }
+
+        .profile-field {
+            padding: 18px;
+            border-radius: 14px;
+            background: #f9fafb;
+            margin-bottom: 20px;
+            transition: 0.2s ease;
+        }
+
+        .profile-field:hover {
+            background: #f1f5ff;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="profile-wrapper">
+    <div class="profile-card">
+
+        <h4 class="profile-title text-center">My Profile</h4>
+
+        <form method="POST">
+            {% csrf_token %}
+
+            <!-- Full Name -->
+            <div class="profile-field">
+                <div class="label">Full Name</div>
+
+                <span id="name-view" class="value">
+                    {% if user.is_superuser %}
+                        {% if user.first_name %}{{ user.first_name }}{% else %}Admin{% endif %}
+                    {% elif user.first_name or user.last_name %}
+                        {{ user.first_name }} {{ user.last_name }}
+                    {% else %}
+                        {{ user.first_name|default:"Customer" }}
+                    {% endif %}
+                </span>
+
+                <input type="text" id="name-input" name="full_name"
+                       class="form-control mt-2"
+                       value="{% if user.is_superuser %}{% if user.first_name %}{{ user.first_name }}{% else %}Admin{% endif %}{% else %}{{ user.first_name }} {{ user.last_name }}{% endif %}"
+                       style="display:none;">
+            </div>
+
+            <!-- Phone -->
+            <div class="profile-field">
+                <div class="label">Phone Number</div>
+                <span id="phone-view" class="value">{{ customer.phone }}</span>
+
+                <input type="text" id="phone-input" name="phone"
+                       class="form-control mt-2"
+                       value="{{ customer.phone }}" style="display:none;">
+            </div>
+
+            <!-- Address -->
+            <div class="profile-field">
+                <div class="label">Address</div>
+                <span id="location-view" class="value">{{ customer.location }}</span>
+
+                <input type="text" id="location-input" name="location"
+                       class="form-control mt-2"
+                       value="{{ customer.location }}" style="display:none;">
+            </div>
+
+            <!-- Buttons -->
+            <div class="text-center mt-4">
+                <button type="button" id="edit-btn" class="btn btn-primary me-2">Edit</button>
+                <button type="submit" id="save-btn" class="btn btn-success me-2" style="display:none;">Save</button>
+                <button type="button" id="cancel-btn" class="btn btn-secondary" style="display:none;">Cancel</button>
+            </div>
+
+        </form>
+
+        <div class="text-center mt-4">
+            <a href="{% url 'dashboard' %}" class="btn btn-outline-primary">
+                ← Back to Dashboard
+            </a>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    const editBtn = document.getElementById("edit-btn");
+    const saveBtn = document.getElementById("save-btn");
+    const cancelBtn = document.getElementById("cancel-btn");
+
+    const nameView = document.getElementById("name-view");
+    const nameInput = document.getElementById("name-input");
+
+    const phoneView = document.getElementById("phone-view");
+    const phoneInput = document.getElementById("phone-input");
+
+    const locationView = document.getElementById("location-view");
+    const locationInput = document.getElementById("location-input");
+
+    editBtn.addEventListener("click", () => {
+        nameView.style.display = "none";
+        phoneView.style.display = "none";
+        locationView.style.display = "none";
+
+        nameInput.style.display = "block";
+        phoneInput.style.display = "block";
+        locationInput.style.display = "block";
+
+        editBtn.style.display = "none";
+        saveBtn.style.display = "inline-block";
+        cancelBtn.style.display = "inline-block";
+    });
+
+    cancelBtn.addEventListener("click", () => {
+        nameInput.value = nameView.textContent.trim();
+        phoneInput.value = phoneView.textContent.trim();
+        locationInput.value = locationView.textContent.trim();
+
+        nameView.style.display = "inline";
+        phoneView.style.display = "inline";
+        locationView.style.display = "inline";
+
+        nameInput.style.display = "none";
+        phoneInput.style.display = "none";
+        locationInput.style.display = "none";
+
+        saveBtn.style.display = "none";
+        cancelBtn.style.display = "none";
+        editBtn.style.display = "inline-block";
+    });
+</script>
+
+</body>
+</html>

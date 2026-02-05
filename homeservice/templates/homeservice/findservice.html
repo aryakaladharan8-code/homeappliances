@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Find a Service</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    {% include 'homeservice/_dashboard_styles.html' %}
+</head>
+
+<body>
+<div class="box dashboard-card">
+    <h4 class="mb-3">Book a Service</h4>
+    <p class="text-muted mb-4">Choose your appliance and the problem you're facing.</p>
+
+    <form method="POST" id="serviceForm">
+        {% csrf_token %}
+
+        <!-- Appliance -->
+        <div class="mb-3">
+            <label class="form-label">Select Appliance</label>
+            <select class="form-select" name="appliance_type" id="appliance" required>
+                <option value="">-- Choose Appliance --</option>
+                <option>Air Conditioner (AC)</option>
+                <option>Washing Machine</option>
+                <option>Refrigerator</option>
+                <option>Microwave Oven</option>
+                <option>Television</option>
+                <option>Water Purifier</option>
+                <option>Dishwasher</option>
+                <option>Geyser</option>
+                <option>Gas Stove</option>
+                <option>Mixer/Grinder</option>
+                <option>Ceiling Fan</option>
+                <option>Vacuum Cleaner</option>
+                <option value="other_appliance">Other</option>
+            </select>
+        </div>
+
+        <div class="mb-3" id="other_appliance_box" style="display:none;">
+            <label class="form-label">Enter Appliance Name</label>
+            <input type="text" class="form-control" name="other_appliance">
+        </div>
+
+        <!-- Problem -->
+        <div class="mb-3">
+            <label class="form-label">Problem</label>
+            <select class="form-select" name="problem" id="problem" required>
+                <option value="">-- Choose Problem --</option>
+                <option>Not turning on</option>
+                <option>Making noise</option>
+                <option>Not cooling / Not heating</option>
+                <option>Stopped working suddenly</option>
+                <option>Power supply issue</option>
+                <option>Water leakage</option>
+                <option>Display problem</option>
+                <option>Button not working</option>
+                <option>Low performance</option>
+                <option value="other_problem">Other problem</option>
+            </select>
+        </div>
+
+        <div class="mb-3" id="other_problem_box" style="display:none;">
+            <label class="form-label">Describe your problem</label>
+            <input type="text" class="form-control" name="other_problem">
+        </div>
+
+        <!-- Technician Area (dropdown) -->
+        <div class="mb-3">
+            <label class="form-label">Service Area </label>
+            <select class="form-select" name="area" id="areaSelect">
+                <option value="">-- Choose an area --</option>
+                {% for area in areas %}
+                    <option value="{{ area }}">{{ area }}</option>
+                {% endfor %}
+            </select>
+            <div class="form-text text-muted">Note: only the areas listed above are available for technician matching.</div>
+        </div>
+
+        <!-- Location (auto-filled) -->
+        <div class="mb-3">
+            <label class="form-label">Location (Full address)</label>
+            <input type="text" class="form-control" name="location" id="locationInput" value="{{ customer.location }}" placeholder="Street, Area, City, State, Pincode" required>
+            <div class="form-text text-muted">You can edit the address after selecting an area for more accuracy.</div>
+        </div>
+
+        <div class="text-center mt-4">
+            <button type="submit" id="submitBtn" class="btn btn-primary px-4">Submit Request</button>
+            <a href="/dashboard/" class="btn btn-outline-secondary px-4">Cancel</a>
+        </div>
+    </form>
+    <div class="text-center mt-3">
+        <a href="{% url 'dashboard' %}" class="btn btn-outline-primary">← Back to Dashboard</a>
+    </div>
+</div>
+
+<script>
+    const appliance = document.getElementById("appliance");
+    const applianceBox = document.getElementById("other_appliance_box");
+
+    const problem = document.getElementById("problem");
+    const problemBox = document.getElementById("other_problem_box");
+
+    appliance.addEventListener("change", () => {
+        if (appliance.value === "other_appliance") {
+            applianceBox.style.display = "block";
+        } else {
+            applianceBox.style.display = "none";
+        }
+    });
+
+    problem.addEventListener("change", () => {
+        if (problem.value === "other_problem") {
+            problemBox.style.display = "block";
+        } else {
+            problemBox.style.display = "none";
+        }
+    });
+
+    // Area select: do NOT overwrite the full address input when an area is chosen
+    // The selected area will be used only for technician matching on the server side.
+    const areaSelect = document.getElementById('areaSelect');
+    const locationInput = document.getElementById('locationInput');
+    if (areaSelect) {
+        areaSelect.addEventListener('change', function () {
+            // Intentionally do nothing here so the user's full address remains unchanged.
+            // If desired later, we can show a small hint that the selected area will be used for matching.
+        });
+    }
+
+    // Prevent double submission: disable submit button after first click
+    const serviceForm = document.getElementById('serviceForm');
+    const submitBtn = document.getElementById('submitBtn');
+    serviceForm.addEventListener('submit', function (e) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = 'Submitting...';
+    });
+</script>
+
+</body>
+</html>

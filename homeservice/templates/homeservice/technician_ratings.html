@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>My Ratings - Technician Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <style>
+        /* ===== BODY BACKGROUND ===== */
+        body {
+            font-family:'Inter', sans-serif;
+            background: linear-gradient(
+                135deg,
+                #b9cceb 25%,
+                #f8fafc 100%
+            );
+            min-height:100vh;
+        }
+
+        /* ===== SIDEBAR (UNCHANGED) ===== */
+        .sidebar { 
+            width:250px; 
+            background:white; 
+            border-right:1px solid #e5e7eb; 
+            padding:25px 18px; 
+            overflow-y:auto; 
+            scrollbar-width:thin; 
+            position:sticky; 
+            top:0; 
+            height:100vh; 
+        }
+
+        .brand { 
+            font-size:22px; 
+            font-weight:700; 
+            color:#2d347d; 
+        }
+
+        .menu a { 
+            margin:8px 0; 
+            display:flex; 
+            align-items:center; 
+            gap:10px; 
+            padding:10px 12px; 
+            font-weight:600; 
+            color:#374151; 
+            text-decoration:none; 
+            border-radius:8px; 
+            background:#fff; 
+            border:1px solid #eef2f8; 
+            transition: all .18s ease; 
+            position:relative; 
+        }
+
+        .menu a svg { 
+            width:18px; 
+            height:18px; 
+            fill:currentColor; 
+            opacity:0.9; 
+        }
+
+        .menu a:hover, 
+        .menu a.active { 
+            background:linear-gradient(90deg,#f1f5ff,#c7d8ff); 
+            color:#2d347d; 
+            transform:translateY(-2px); 
+            box-shadow:0 6px 20px rgba(47,63,88,0.04); 
+        }
+
+        .side-item { 
+            display:block; 
+            padding:10px 14px; 
+            border-radius:10px; 
+            background:#ffffff; 
+            color:#556179; 
+            border:1px solid #eef2f8; 
+            font-weight:600; 
+            transition: all .18s ease; 
+        }
+
+        .side-item:hover { 
+            background:linear-gradient(90deg,#f1f5ff,#c7d8ff); 
+            color:#2d347d; 
+            transform:translateY(-2px); 
+        }
+
+        /* ===== MAIN CONTENT ===== */
+        .flex-grow-1 {
+            padding:40px 50px;
+        }
+
+        h3 {
+            font-weight:700;
+            color:#1f2937;
+        }
+
+        /* ===== STATS CARDS ===== */
+        .stats-card { 
+            background:white; 
+            border-radius:16px; 
+            padding:30px; 
+            box-shadow:0 10px 25px rgba(0,0,0,0.06); 
+            text-align:center;
+            transition:0.2s ease;
+        }
+
+        .stats-card:hover{
+            transform:translateY(-4px);
+        }
+
+        .stats-card h3 { 
+            margin:0; 
+            font-size:2.3rem; 
+            font-weight:700; 
+            color:#2d347d;
+        }
+
+        .stats-card p { 
+            margin:8px 0 0 0; 
+            color:#6b7280;
+        }
+
+        /* ===== RATINGS CARD ===== */
+        .card-box { 
+            border-radius:16px; 
+            padding:30px; 
+            background:white; 
+            box-shadow:0 12px 30px rgba(0,0,0,0.05); 
+        }
+
+        /* ===== TABLE ===== */
+        .table thead {
+            background:#eef2ff;
+        }
+
+        .table-hover tbody tr:hover { 
+            background:#f9fbff; 
+        }
+
+        /* ===== STARS ===== */
+        .rating-stars .star { 
+            color:#ddd; 
+            font-size:16px; 
+        }
+
+        .rating-stars .star.filled { 
+            color:#ffc107; 
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media(max-width:991px){
+            .sidebar{
+                display:none;
+            }
+            .flex-grow-1{
+                padding:25px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+<div class="d-flex" style="min-height:100vh;">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <h4 class="brand mb-4">Technician Panel</h4>
+
+        <nav class="menu">
+            <a href="{% url 'techniciandashboard' %}" class="{% if active_page == 'dashboard' %}active{% endif %}">Dashboard</a>
+            <a href="{% url 'technician_ratings' %}" class="{% if active_page == 'ratings' %}active{% endif %}">Ratings</a>
+            <a href="{% url 'my_jobs' %}" class="{% if active_page == 'jobs' %}active{% endif %}">My Jobs</a>
+            <a href="{% url 'technician_payment' %}" class="{% if active_page == 'payment' %}active{% endif %}">Payment</a>
+            <a href="{% url 'technician_profile' %}" class="{% if active_page == 'profile' %}active{% endif %}">Profile</a>
+            <a href="#" class="side-item text-danger logout-trigger">Logout</a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <div class="flex-grow-1">
+
+        <div class="mb-4">
+            <h3>My Customer Ratings & Reviews</h3>
+            <p class="text-muted">Track your service quality and customer feedback</p>
+        </div>
+
+        <!-- Rating Statistics -->
+        <div class="row g-4 mb-4">
+            <div class="col-md-4">
+                <div class="stats-card">
+                    <h3>{{ average_rating }}</h3>
+                    <p>Average Rating</p>
+                    <small class="text-muted">Out of 5 stars</small>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stats-card">
+                    <h3>{{ total_ratings }}</h3>
+                    <p>Total Reviews</p>
+                    <small class="text-muted">Customer feedback received</small>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stats-card">
+                    <h3>{{ five_star_count }}</h3>
+                    <p>5-Star Ratings</p>
+                    <small class="text-muted">Perfect scores</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ratings Table -->
+        {% if ratings %}
+        <div class="card-box">
+            <h5 class="mb-4 fw-semibold">Detailed Customer Reviews</h5>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Customer</th>
+                            <th>Service Type</th>
+                            <th>Rating</th>
+                            <th>Review</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for rating in ratings %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>{{ rating.job.user.first_name|default:rating.job.user.username }}</td>
+                            <td>
+                                <span class="badge bg-primary">
+                                    {{ rating.job.service_type }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="rating-stars d-flex align-items-center">
+                                    {% for i in "12345"|make_list %}
+                                        <span class="star {% if forloop.counter <= rating.stars %}filled{% endif %}">★</span>
+                                    {% endfor %}
+                                    <span class="ms-2 fw-semibold">{{ rating.stars }}/5</span>
+                                </div>
+                            </td>
+                            <td>
+                                {% if rating.job.review %}
+                                    "{{ rating.job.review }}"
+                                {% else %}
+                                    <em class="text-muted">No review</em>
+                                {% endif %}
+                            </td>
+                            <td class="text-muted small">
+                                {{ rating.created_at|date:"M d, Y" }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% else %}
+        <div class="card-box text-center py-5">
+            <h5 class="text-muted">No Ratings Yet</h5>
+            <p class="text-muted">Complete services to start receiving ratings.</p>
+            <a href="{% url 'techniciandashboard' %}" class="btn btn-primary">
+                View Jobs
+            </a>
+        </div>
+        {% endif %}
+
+    </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+{% include 'homeservice/_logout_modal.html' %}
+</body>
+</html>

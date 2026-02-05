@@ -1,0 +1,244 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Technician Signup</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root{
+            --primary:#2d347d;
+            --muted:#6c7280;
+        }
+
+        body {
+            font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto;
+            min-height:100vh;
+            position: relative;
+            overflow-x: hidden;
+
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            padding-top: 30px;
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            background: url("{% static 'images/appliance2.png' %}") center center / cover no-repeat;
+            transform: scale(1.03);
+            z-index: -2;
+        }
+
+        body::after {
+            content: "";
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.25);
+            z-index: -1;
+        }
+
+        .card {
+            border-radius: 18px;
+            padding: 40px;
+            background: rgba(255, 255, 255, 0.65);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid rgba(255,255,255,0.3);
+            box-shadow: 0 25px 70px rgba(0,0,0,0.2);
+        }
+
+        .brand {
+            color: var(--primary);
+            font-weight: 800;
+            font-size: 1.4rem;
+        }
+
+        .small-muted {
+            font-size: .9rem;
+            color: var(--muted);
+        }
+
+        .form-control {
+            border-radius: 10px;
+            transition: 0.2s ease;
+        }
+
+        .form-control:focus {
+            border-color: var(--primary);
+            box-shadow: 0 5px 15px rgba(45,52,125,0.15);
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            border-color: var(--primary);
+            border-radius: 10px;
+            transition: 0.2s ease;
+        }
+
+        .btn-primary:hover {
+            background: #24305a;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.25);
+        }
+
+        /* Hide extra skill field initially */
+        #otherSkillBox {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+  <div class="row justify-content-center">
+    <div class="col-sm-10 col-md-8 col-lg-6">
+
+      <div class="card">
+
+        <div class="text-center mb-4">
+          <div class="brand">Technician Signup</div>
+          <div class="small-muted">Join the HomeFix Pro platform</div>
+        </div>
+
+        {% if messages %}
+          {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+          {% endfor %}
+        {% endif %}
+
+        {# Display form validation errors #}
+        {% if form.non_field_errors %}
+          <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+        {% endif %}
+
+        {% if form.errors %}
+          <div class="alert alert-danger">
+            <ul class="mb-0">
+              {% for field, errors in form.errors.items %}
+                {% for error in errors %}
+                  <li>{{ error }}</li>
+                {% endfor %}
+              {% endfor %}
+            </ul>
+          </div>
+        {% endif %}
+
+        <form method="post" enctype="multipart/form-data">
+          {% csrf_token %}
+
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              {{ form.name.label_tag }}
+              {{ form.name }}
+            </div>
+            <div class="col-md-6 mb-3">
+              {{ form.email.label_tag }}
+              {{ form.email }}
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              {{ form.phone.label_tag }}
+              {{ form.phone }}
+            </div>
+
+            <div class="col-md-6 mb-3">
+              {{ form.skill.label_tag }}
+              {{ form.skill }}
+            </div>
+          </div>
+
+          <!-- NEW FIELD: Specify Skill -->
+          <div class="mb-3" id="otherSkillBox">
+              {{ form.custom_skill.label_tag }}
+              {{ form.custom_skill }}
+          </div>
+
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              {{ form.address.label_tag }}
+              {{ form.address }}
+            </div>
+            <div class="col-md-6 mb-3">
+              {{ form.experience_years.label_tag }}
+              {{ form.experience_years }}
+            </div>
+          </div>
+
+          <div class="mb-3">
+            {{ form.service_locations.label_tag }}
+            {{ form.service_locations }}
+          </div>
+
+          <div class="mb-3">
+            {{ form.idproof.label_tag }}
+            {{ form.idproof }}
+          </div>
+
+          <div class="mb-3">
+            {{ form.experience_certificate.label_tag }}
+            {{ form.experience_certificate }}
+          </div>
+
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label">Password</label>
+              <input class="form-control" type="password" name="password" required>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label class="form-label">Confirm Password</label>
+              <input class="form-control" type="password" name="confirm_password" required>
+            </div>
+          </div>
+
+          <button class="btn btn-primary w-100 mt-2" type="submit">
+              Sign Up
+          </button>
+
+          <div class="text-center mt-3 small-muted">
+            Already registered?
+            <a href="{% url 'technicianlogin' %}">Login here</a>
+          </div>
+
+        </form>
+
+      </div>
+
+      <p class="text-center text-muted mt-3 small">© HomeFix Pro</p>
+
+    </div>
+  </div>
+</div>
+
+<!-- JAVASCRIPT FOR DYNAMIC FIELD -->
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const skillSelect = document.querySelector("select[name='skill']");
+        const otherSkillBox = document.getElementById("otherSkillBox");
+
+        function toggleOtherSkill() {
+            if (skillSelect.value.toLowerCase() === "others") {
+                otherSkillBox.style.display = "block";
+            } else {
+                otherSkillBox.style.display = "none";
+            }
+        }
+
+        skillSelect.addEventListener("change", toggleOtherSkill);
+
+        // Run once on load (in case form reloads)
+        toggleOtherSkill();
+    });
+</script>
+
+</body>
+</html>

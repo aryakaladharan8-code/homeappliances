@@ -1,0 +1,23 @@
+<style>
+    /* Shared dashboard background + container styles */
+    body {
+        font-family: 'Inter', sans-serif;
+        background: linear-gradient(135deg,#b9cceb 25%, #f8fafc 100%);
+        background-attachment: fixed;
+        color: #273444;
+    }
+
+    /* Unified box/card container used across dashboard pages */
+    .dashboard-card {
+        max-width:980px; margin:56px auto; background:#ffffff; padding:32px; border-radius:14px; box-shadow:0 12px 30px rgba(13,38,77,0.08);
+    }
+
+    /* Small helper tweaks */
+    h4 { color:#2d347d; font-weight:700; margin-bottom:6px; }
+    .muted { color:#6b7280; }
+
+    /* Ensure responsiveness for narrow screens */
+    @media (max-width:640px) {
+        .dashboard-card { margin:28px 16px; padding:20px; border-radius:12px; }
+    }
+</style>

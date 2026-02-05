@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Admin Dashboard</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- SAME BACKGROUND + COMMON DASHBOARD STYLES -->
+    {% include 'homeservice/_dashboard_styles.html' %}
+
+    <style>
+        .sidebar {
+            min-height:100vh;
+            background:white;
+            border-right:1px solid #e5e7eb;
+            padding:25px 18px;
+        }
+
+        .brand {
+            font-size:22px;
+            font-weight:700;
+            color:#2d347d;
+        }
+
+        .menu a {
+            margin:10px 0;
+            display:flex;
+            align-items:center;
+            gap:10px;
+            padding:10px 12px;
+            font-weight:600;
+            color:#374151;
+            text-decoration:none;
+            border-radius:8px;
+            background:#fff;
+            border:1px solid #eef2f8;
+            transition:all .18s ease;
+            position:relative;
+        }
+
+        .menu a svg {
+            width:18px;
+            height:18px;
+            fill:currentColor;
+        }
+
+        .menu a:hover,
+        .menu a.active {
+            background:linear-gradient(90deg,#f1f5ff,#c7d8ff);
+            color:#2d347d;
+            transform:translateY(-2px);
+            box-shadow:0 8px 30px rgba(47,63,88,0.06);
+        }
+
+        .stat-box {
+            border-radius:12px;
+            padding:18px;
+            color:#fff;
+            box-shadow:0 8px 20px rgba(13,38,77,0.06);
+        }
+
+        .stat-box .num {
+            font-size:26px;
+            font-weight:800;
+        }
+
+        .stat-primary { background:linear-gradient(135deg,#2d347d,#3b6be0); }
+        .stat-accent { background:linear-gradient(135deg,#ff8a65,#ff6b6b); }
+        .stat-success { background:linear-gradient(135deg,#2ecc71,#28a745); }
+        .stat-info { background:linear-gradient(135deg,#6c757d,#495057); }
+
+        .rating-stars .star { color:#ddd; font-size:14px; }
+        .rating-stars .star.filled { color:#ffc107; }
+    </style>
+</head>
+
+<body>
+
+<div class="container-fluid">
+<div class="row">
+
+    <!-- Sidebar -->
+    <aside class="col-md-3 col-lg-2 sidebar">
+        <h4 class="brand mb-4">Admin Panel</h4>
+
+        <nav class="menu">
+            <a href="/admindashboard/" class="active">Dashboard</a>
+            <a href="/admin_leaderboard/">Leaderboard</a>
+            <a href="/customerlist/">Customers</a>
+            <a href="/technicians/">Technicians</a>
+            <a href="/admin_payments/">Payments</a>
+            <a href="/admin_reports/">Reports</a>
+            <a href="#" class="text-danger logout-trigger">Logout</a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="col-md-9 col-lg-10 p-4">
+
+        <div class="mb-4">
+            <h4>Welcome Admin 👋</h4>
+            <p class="text-muted">Manage service requests and technicians.</p>
+
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} mt-2">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        </div>
+
+        <!-- Stats -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="stat-box stat-primary text-center">
+                    <div class="num">{{ pending }}</div>
+                    <div class="small">Pending Requests</div>
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="stat-box stat-accent text-center">
+                    <div class="num">{{ open }}</div>
+                    <div class="small">Open for Technicians</div>
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="stat-box stat-info text-center">
+                    <div class="num">{{ assigned }}</div>
+                    <div class="small">Assigned</div>
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="stat-box stat-success text-center">
+                    <div class="num">{{ completed }}</div>
+                    <div class="small">Completed</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Table -->
+        <div class="card dashboard-card">
+            <div class="card-header bg-transparent border-0">
+                <h5>Service Requests</h5>
+            </div>
+
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped align-middle">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Service</th>
+                                <th>Problem</th>
+                                <th>Status</th>
+                                <th>Technician</th>
+                                <th>Rating</th>
+                                <th>Send</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% for request in requests %}
+                            <tr>
+                                <td>{{ request.id }}</td>
+                                <td>{{ request.service_type }}</td>
+                                <td>{{ request.problem_description|truncatechars:40 }}</td>
+
+                                <td>
+                                    <span class="badge
+                                        {% if request.status == 'pending' %}bg-warning
+                                        {% elif request.status == 'open' %}bg-info
+                                        {% elif request.status == 'assigned' %}bg-primary
+                                        {% elif request.status == 'completed' %}bg-success
+                                        {% else %}bg-secondary{% endif %}">
+                                        {{ request.get_status_display }}
+                                    </span>
+                                </td>
+
+                                <td>
+                                    {% if request.technician %}
+                                        {{ request.technician.technician.name }}
+                                    {% else %}
+                                        N/A
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    {% if request.status == 'completed' and request.rating_obj %}
+                                        <div class="rating-stars">
+                                            {% for i in "12345"|make_list %}
+                                                <span class="star {% if forloop.counter <= request.rating_obj.stars %}filled{% endif %}">★</span>
+                                            {% endfor %}
+                                            <small class="text-muted">
+                                                ({{ request.rating_obj.stars }}/5)
+                                            </small>
+                                        </div>
+                                    {% elif request.status == 'completed' %}
+                                        <small class="text-muted">Not rated</small>
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    {% if request.status == 'pending' %}
+                                    <form method="post">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="request_id" value="{{ request.id }}">
+                                        <button type="submit" name="action" value="send"
+                                                class="btn btn-warning btn-sm">
+                                            Send
+                                        </button>
+                                    </form>
+                                    {% else %}
+                                        Sent
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    <a href="{% url 'request_detail' request.id %}"
+                                       class="btn btn-info btn-sm">
+                                       View
+                                    </a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </main>
+</div>
+</div>
+
+{% include 'homeservice/_logout_modal.html' %}
+
+</body>
+</html>

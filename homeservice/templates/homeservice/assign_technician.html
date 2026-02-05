@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Assign Technician</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background:#f5f7fc; font-family:'Inter', sans-serif; }
+        .container { max-width:800px; margin:50px auto; background:white; padding:30px; border-radius:12px; box-shadow:0 5px 18px rgba(0,0,0,0.08); }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h3 class="mb-4">Assign Technician</h3>
+    
+    {% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+    {% endfor %}
+    {% endif %}
+
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5>Service Request Details</h5>
+        </div>
+        <div class="card-body">
+            <p><strong>Service:</strong> {{ service_request.service_type }}</p>
+            <p><strong>Problem:</strong> {{ service_request.problem_description }}</p>
+            <p><strong>Location:</strong> {{ service_request.location }}</p>
+            <p><strong>Address:</strong> {{ service_request.address }}</p>
+            <p><strong>Status:</strong> {{ service_request.get_status_display }}</p>
+        </div>
+    </div>
+
+    {% if eligible_technicians %}
+    <form method="POST">
+        {% csrf_token %}
+        <div class="mb-3">
+            <label class="form-label">Select Eligible Technician</label>
+            <select name="technician_id" class="form-control" required>
+                <option value="">Choose a technician...</option>
+                {% for tech in eligible_technicians %}
+                <tr>
+                    <option value="{{ tech.user.id }}">{{ tech.name }} ({{ tech.skill }}) - {{ tech.location }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button type="submit" class="btn btn-success">Assign Technician</button>
+        <a href="{% url 'admindashboard' %}" class="btn btn-secondary">Cancel</a>
+    </form>
+    {% else %}
+    <div class="alert alert-warning">
+        No eligible technicians found for this location.
+    </div>
+    {% endif %}
+</div>
+
+</body>
+</html></content>
+<parameter name="filePath">c:\Users\ARYA KALADHARAN\homeappliances\homeservice\templates\homeservice\assign_technician.html

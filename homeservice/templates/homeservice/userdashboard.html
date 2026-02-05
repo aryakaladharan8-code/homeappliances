@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>User Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    {% include 'homeservice/_dashboard_styles.html' %}
+    <style>
+        .sidebar {
+    min-height: 100vh;
+    background: #f7f7f8;   /* deep navy */
+    border-right: 1px solid rgba(255,255,255,0.08);
+    padding-top: 30px;
+}
+
+        .brand { font-size:22px; font-weight:700; color:#2d347d; }
+        .menu a { font-weight:500; color:#556179; padding:8px 0; }
+        .menu a.active { color:#2d347d; font-weight:700; }
+        .card-box { border-radius:12px; box-shadow:0 6px 20px rgba(47,63,88,0.06); transition:.2s; }
+        .card-box:hover { transform: translateY(-4px); box-shadow:0 10px 30px rgba(47,63,88,0.08); }
+        .muted { color:#727b90; }
+        .profile-card { border-radius:12px; padding:18px; display:flex; gap:12px; align-items:center; background:linear-gradient(90deg,#ffffff,#fbfcff); }
+        .profile-avatar { width:64px;height:64px;border-radius:12px;object-fit:cover;box-shadow:0 3px 10px rgba(39,52,68,0.08); display:inline-flex; align-items:center; justify-content:center; }
+        .total-badge { display:inline-block; padding:6px 12px; border-radius:999px; background:linear-gradient(90deg,#3b6be0,#2d347d); color:#fff; font-weight:700; font-size:13px; margin-left:8px; }
+        .stat-card { border-radius:12px; padding:18px; color:#fff; }
+        .stat-card .label { font-size:13px; opacity:0.95; }
+        .side-item { display:block; padding:10px 14px; border-radius:10px; background:#ffffff; color:#556179; border:1px solid #eef2f8; font-weight:600; position:relative; transition: all .18s ease; }
+        .side-item svg { width:18px; height:18px; margin-right:8px; vertical-align:middle; fill:currentColor; opacity:0.9; }
+        .side-item::before { content:""; position:absolute; left:8px; top:50%; transform:translateY(-50%); width:0; height:36px; background:linear-gradient(180deg,#3b6be0,#2d347d); border-radius:8px; transition: width .18s ease; }
+        .side-item:hover, .side-item.active { background:linear-gradient(90deg,#f1f5ff,#c7d8ff); color:#2d347d; text-decoration:none; box-shadow:0 6px 20px rgba(47,63,88,0.04); transform:translateY(-2px); }
+        .side-item:hover::before, .side-item.active::before { width:4px; }
+        .side-item:hover svg, .side-item.active svg { color:#2d347d; opacity:1; }
+        .stat-card .value { font-size:22px; font-weight:700; margin-top:6px; }
+        .stat-primary { background: linear-gradient(135deg,#2d347d,#3b6be0); }
+        .stat-warning { background: linear-gradient(135deg,#f6c84c,#ff9f1c); }
+        .stat-success { background: linear-gradient(135deg,#2ecc71,#28a745); }
+        .quick-actions .btn { margin-right:8px; }
+        .table tbody tr:hover { background:#fbfcff; transform: translateY(-1px); }
+        .tech-avatar { width:40px;height:40px;border-radius:8px;object-fit:cover; }
+        .empty-illustration { width:120px; opacity:0.9; }
+        @media (max-width:767px) {
+            .sidebar { display:none; }
+            .profile-avatar { width:48px;height:48px; }
+        }
+    </style>
+</head>
+
+<body>
+<div class="container-fluid">
+    <div class="row">
+
+        <!-- Sidebar -->
+        <aside class="col-md-3 col-lg-2 sidebar p-4">
+            <div class="d-flex align-items-center gap-2 mb-4">
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="#2d347d">
+                    <rect width="24" height="24" rx="6"/><path d="M7 12h10M7 8h10M7 16h6" stroke="white" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span class="brand">HomeFix Pro</span>
+            </div>
+
+            <div class="d-grid gap-2">
+                <a href="/dashboard/" class="side-item text-decoration-none active"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M3 11.5L12 4l9 7.5v7A1.5 1.5 0 0 1 19.5 20h-15A1.5 1.5 0 0 1 3 18.5v-7z"></path></svg>Dashboard</a>
+                <a href="/profile/" class="side-item text-decoration-none"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0 2c-4.418 0-8 2.015-8 4.5V21h16v-2.5c0-2.485-3.582-4.5-8-4.5z"></path></svg>Profile / Settings</a>
+                <a href="/findservice/" class="side-item text-decoration-none"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M21 21l-4.35-4.35M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15z"></path></svg>Find a Service</a>
+                <a href="/recentservices/" class="side-item text-decoration-none"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M3 6h18M3 12h18M3 18h18"></path></svg>Recent Services</a>
+                <a href="#" class="side-item text-decoration-none text-danger logout-trigger"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M16 17l5-5-5-5M21 12H9"></path></svg>Logout</a>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="col-md-9 col-lg-10 p-4">
+
+            <div class="row align-items-center mb-4">
+                <div class="col-md-6">
+                    <div class="profile-card card-box d-flex align-items-center">
+                        <div class="profile-avatar d-flex align-items-center justify-content-center" style="background:#2d347d;color:#fff;font-weight:700;border-radius:12px;">{{ user.first_name|default:user.username|slice:":1"|upper }}</div>
+                        <div>
+                            <div class="h5 mb-0">{{ user.first_name|default:user.username }}</div>
+                            <div class="muted small">Member since {{ user.date_joined|date:"M Y" }}</div>
+                            <div class="mt-2 small muted">Total requests: <span class="total-badge">{{ total_requests|default:0 }}</span></div>
+                        </div>
+                    </div>
+                </div>
+                <!-- top quick actions removed to avoid duplication with sidebar -->
+            </div>
+
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            {% if complete_profile_needed %}
+                <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                    <strong>Complete your profile</strong> — please <a href="{% url 'profile' %}" class="alert-link">add address</a> so technicians can reach you faster.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endif %}
+
+            <div class="row g-3 mb-4">
+                <div class="col-6 col-sm-3">
+                    <div class="stat-card stat-primary">
+                        <div class="label">Pending</div>
+                        <div class="value">{{ pending|default:0 }}</div>
+                    </div>
+                </div>
+                <div class="col-6 col-sm-3">
+                    <div class="stat-card" style="background: linear-gradient(135deg,#7a8be6,#4b6be0);">
+                        <div class="label">Open for Technicians</div>
+                        <div class="value">{{ open|default:0 }}</div>
+                    </div>
+                </div>
+                <div class="col-6 col-sm-3">
+                    <div class="stat-card stat-warning">
+                        <div class="label">In Progress</div>
+                        <div class="value">{{ progress|default:0 }}</div>
+                    </div>
+                </div>
+                <div class="col-6 col-sm-3">
+                    <div class="stat-card stat-success">
+                        <div class="label">Completed</div>
+                        <div class="value">{{ completed|default:0 }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Requests -->
+            <div class="card bg-white mb-4">
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <h6 class="mb-0">Recent Services</h6>
+                        <a href="{% url 'recentservices' %}" class="btn btn-sm btn-outline-primary">View all</a>
+                    </div>
+
+                    {% if recent_requests %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Service Type</th>
+                                    <th>Problem</th>
+                                            <th>Status</th>
+                                    <th>Technician</th>
+                                    <th>Location</th>
+                                    <th>Date</th>
+                                    <th>Rating</th>
+                                    <th>View</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            {% for item in recent_requests %}
+                                <tr>
+                                    <td class="align-middle">{{ forloop.counter }}</td>
+                                    <td class="align-middle">{{ item.service_type }}</td>
+                                    <td class="muted small align-middle">{{ item.problem_description|truncatewords:6 }}</td>
+                                    <td class="align-middle">
+                                        {% with status=item.status|default:""|lower %}
+                                            {% if status == 'pending' %}
+                                                <span class="badge bg-warning text-dark">Pending</span>
+                                            {% elif status == 'assigned' %}
+                                                <span class="badge bg-primary">In Progress</span>
+                                            {% elif status == 'completed' %}
+                                                <span class="badge bg-success">Completed</span>
+                                            {% elif status == 'open' %}
+                                                <span class="badge bg-info text-dark">Open</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">{{ item.get_status_display|default:item.status|default:'Unknown' }}</span>
+                                            {% endif %}
+                                        {% endwith %}
+                                    </td>
+                                    <td class="align-middle">
+                                        {% if item.technician and item.technician.technician %}
+                                            <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#techModal{{ item.id }}">View Technician Details</button>
+                                        {% else %}
+                                            <small class="text-muted">No technician yet</small>
+                                        {% endif %}
+                                    </td>
+                                    <td class="muted small align-middle">{{ item.address }}</td>
+                                    <td class="muted small align-middle">{{ item.created_at|date:'M d, Y' }}</td>
+                                    <td class="align-middle">
+                                        {% if item.status|lower == 'completed' %}
+                                            {% if item.rating_obj or item.rating %}
+                                                {% with stars=item.rating_obj.stars|default:item.rating %}
+                                                <div class="rating-stars d-inline-block me-2">
+                                                    {% for i in "12345"|make_list %}
+                                                        <span class="star {% if forloop.counter <= stars %}filled{% endif %}">★</span>
+                                                    {% endfor %}
+                                                </div>
+                                                {% if item.review %}
+                                                    <small class="text-muted d-block">{{ item.review|truncatewords:5 }}</small>
+                                                {% endif %}
+                                                {% endwith %}
+                                            {% elif item.technician %}
+                                                <button class="btn btn-sm btn-outline-warning ms-2" data-bs-toggle="modal" data-bs-target="#rateModal{{ item.id }}">Rate</button>
+                                            {% else %}
+                                                <small class="text-muted">No technician assigned</small>
+                                            {% endif %}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td class="align-middle text-end">
+                                        <a href="{% url 'view_invoice' item.id %}" class="btn btn-sm btn-outline-primary">Invoice</a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                        <div class="text-center py-5 muted">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="empty-illustration mb-3" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="12" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></svg>
+                            <div class="h5">No service requests yet</div>
+                            <p class="muted">When you create a request it will appear here.</p>
+                            <a href="{% url 'findservice' %}" class="btn btn-primary">Create your first request</a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+        </main>
+    </div>
+</div>
+
+<!-- Rating Modals -->
+{% for item in recent_requests %}
+{% if item.status|lower == 'completed' and item.technician and not item.rating_obj and not item.rating %}
+<div class="modal fade" id="rateModal{{ item.id }}" tabindex="-1" aria-labelledby="rateModalLabel{{ item.id }}" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="rateModalLabel{{ item.id }}">Rate Your Technician</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" action="{% url 'rate_technician' item.id %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <p><strong>Service:</strong> {{ item.service_type }}</p>
+                    <p><strong>Technician:</strong>
+                        {% if item.technician and item.technician.technician %}
+                            {{ item.technician.technician.name }}
+                        {% else %}
+                            {{ item.technician.username }}
+                        {% endif %}
+                    </p>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Rating:</label>
+                        <div class="rating-input">
+                            <div class="stars">
+                                <input type="radio" name="rating" value="5" id="star5-{{ item.id }}" {% if item.rating_obj and item.rating_obj.stars == 5 %}checked{% endif %}>
+                                <label for="star5-{{ item.id }}">★</label>
+                                <input type="radio" name="rating" value="4" id="star4-{{ item.id }}" {% if item.rating_obj and item.rating_obj.stars == 4 %}checked{% endif %}>
+                                <label for="star4-{{ item.id }}">★</label>
+                                <input type="radio" name="rating" value="3" id="star3-{{ item.id }}" {% if item.rating_obj and item.rating_obj.stars == 3 %}checked{% endif %}>
+                                <label for="star3-{{ item.id }}">★</label>
+                                <input type="radio" name="rating" value="2" id="star2-{{ item.id }}" {% if item.rating_obj and item.rating_obj.stars == 2 %}checked{% endif %}>
+                                <label for="star2-{{ item.id }}">★</label>
+                                <input type="radio" name="rating" value="1" id="star1-{{ item.id }}" {% if item.rating_obj and item.rating_obj.stars == 1 %}checked{% endif %}>
+                                <label for="star1-{{ item.id }}">★</label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="review{{ item.id }}" class="form-label">Review (Optional):</label>
+                        <textarea class="form-control" id="review{{ item.id }}" name="review" rows="3" placeholder="Share your experience...">{{ item.review|default:'' }}</textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Submit Rating</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endfor %}
+
+{% comment %} Technician Detail Modals {% endcomment %}
+{% for item in recent_requests %}
+{% if item.technician and item.technician.technician %}
+<div class="modal fade" id="techModal{{ item.id }}" tabindex="-1" aria-labelledby="techModalLabel{{ item.id }}" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="techModalLabel{{ item.id }}">Technician Details</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        {% with tech=item.technician.technician %}
+        <div class="d-flex align-items-start gap-3">
+          {% if tech.photo %}
+            <img src="{{ tech.photo.url }}" alt="Tech" style="width:96px;height:96px;border-radius:8px;object-fit:cover">
+          {% else %}
+            <div style="width:96px;height:96px;border-radius:8px;background:#eee;display:flex;align-items:center;justify-content:center;color:#555;font-weight:600;">{{ tech.name|slice:':1'|upper }}</div>
+          {% endif %}
+          <div>
+            <h5 class="mb-1">{{ tech.name }}</h5>
+            <p class="mb-1"><strong>Skill:</strong> {{ tech.skill }}</p>
+            <p class="mb-1"><strong>Phone:</strong> {{ tech.phone }}</p>
+            <p class="mb-1"><strong>Email:</strong> {{ tech.email }}</p>
+            <p class="mb-1"><strong>Address:</strong> {{ tech.address }}</p>
+            <p class="mb-0"><strong>Experience:</strong> {{ tech.experience_years }} years</p>
+          </div>
+        </div>
+        {% endwith %}
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endfor %}
+
+<style>
+.rating-stars .star {
+    color: #ddd;
+    font-size: 18px;
+}
+.rating-stars .star.filled {
+    color: #ffc107;
+}
+.stars {
+    display: flex;
+    flex-direction: row-reverse;
+}
+.stars input {
+    display: none;
+}
+.stars label {
+    cursor: pointer;
+    font-size: 30px;
+    color: #ddd;
+    margin: 0 2px;
+    transition: color 0.2s;
+}
+.stars input:checked ~ label,
+.stars label:hover,
+.stars label:hover ~ label {
+    color: #ffc107;
+}
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+{% include 'homeservice/_logout_modal.html' %}
+</body>
+</html>

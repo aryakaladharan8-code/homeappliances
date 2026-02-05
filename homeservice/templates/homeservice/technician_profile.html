@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Technician Profile</title>
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+<style>
+
+/* ===== Background ===== */
+body {
+    font-family:'Inter', sans-serif;
+    background: linear-gradient(
+        135deg,
+        #b9cceb 25%,
+        #f8fafc 100%
+    );
+    min-height:100vh;
+}
+
+/* ===== Sidebar (UNCHANGED) ===== */
+.sidebar { width:250px; background:white; border-right:1px solid #e5e7eb; padding:25px 18px; position:sticky; top:0; height:100vh; }
+.brand { font-size:22px; font-weight:700; color:#2d347d; }
+
+.menu a { 
+    margin:8px 0; 
+    display:flex; 
+    align-items:center; 
+    gap:10px; 
+    padding:10px 12px; 
+    font-weight:600; 
+    color:#374151; 
+    text-decoration:none; 
+    border-radius:8px; 
+    background:#fff; 
+    border:1px solid #eef2f8; 
+    transition: all .18s ease; 
+}
+
+.menu a:hover, 
+.menu a.active { 
+    background:linear-gradient(90deg,#eef2ff,#fbfcff); 
+    color:#2d347d; 
+    transform:translateY(-2px); 
+    box-shadow:0 6px 20px rgba(47,63,88,0.04); 
+}
+
+.side-item { 
+    display:block; 
+    padding:10px 14px; 
+    border-radius:10px; 
+    background:#ffffff; 
+    color:#556179; 
+    border:1px solid #eef2f8; 
+    font-weight:600; 
+    transition: all .18s ease; 
+}
+
+.side-item:hover { 
+    background:linear-gradient(90deg,#f1f5ff,#c7d8ff); 
+    color:#2d347d; 
+    transform:translateY(-2px); 
+}
+
+/* ===== Main Content ===== */
+.flex-grow-1 {
+    padding:45px 55px;
+}
+
+h3 {
+    font-weight:700;
+    color:#1f2937;
+}
+
+/* ===== Card Styling ===== */
+.card-box { 
+    border-radius:20px; 
+    padding:40px; 
+    background:white; 
+    box-shadow:0 20px 40px rgba(0,0,0,0.06); 
+}
+
+/* ===== Profile Header ===== */
+.profile-header { 
+    text-align:center; 
+    margin-bottom:35px; 
+}
+
+.profile-avatar { 
+    width:90px; 
+    height:90px; 
+    background:#2d347d; 
+    color:white; 
+    border-radius:50%; 
+    display:flex; 
+    align-items:center; 
+    justify-content:center; 
+    font-size:34px; 
+    font-weight:700; 
+    margin:0 auto 15px; 
+    box-shadow:0 8px 20px rgba(45,52,125,0.3);
+}
+
+/* ===== Form Styling ===== */
+.label { 
+    font-size:.85rem; 
+    color:#6b7280; 
+    margin-bottom:5px;
+    display:block;
+}
+
+.form-control {
+    border-radius:12px;
+    padding:10px 12px;
+}
+
+.form-control:focus {
+    border-color:#2d347d;
+    box-shadow:0 0 0 3px rgba(45,52,125,0.1);
+}
+
+.btn-success {
+    border-radius:12px;
+    padding:10px 20px;
+    font-weight:600;
+}
+
+@media(max-width:991px){
+    .sidebar{
+        display:none;
+    }
+    .flex-grow-1{
+        padding:25px;
+    }
+}
+
+</style>
+</head>
+
+<body>
+<div class="d-flex">
+
+<aside class="sidebar">
+<h4 class="brand mb-4">Technician Panel</h4>
+<nav class="menu">
+<a href="{% url 'techniciandashboard' %}">Dashboard</a>
+<a href="{% url 'technician_ratings' %}">Ratings</a>
+<a href="{% url 'my_jobs' %}">My Jobs</a>
+<a href="{% url 'technician_payment' %}">Payment</a>
+<a href="{% url 'technician_profile' %}" class="active">Profile</a>
+<a href="#" class="side-item text-decoration-none text-danger logout-trigger">Logout</a>
+</nav>
+</aside>
+
+<div class="flex-grow-1">
+
+    
+
+<h3>My Profile</h3>
+
+<div class="card-box mt-3">
+
+<div class="profile-header">
+{% if technician.photo %}
+    <img src="{{ technician.photo.url }}" class="profile-avatar" style="object-fit:cover;">
+{% else %}
+    <div class="profile-avatar">{{ technician.name|slice:":1"|upper }}</div>
+{% endif %}
+<h5 class="fw-bold">{{ technician.name }}</h5>
+<p class="text-muted">{{ technician.skill }} • {{ technician.experience_years }} years experience</p>
+</div>
+
+<form method="POST" enctype="multipart/form-data">
+{% csrf_token %}
+
+<div class="mb-3">
+    <label class="form-label fw-semibold">Profile Photo</label>
+    <input type="file" name="photo" class="form-control">
+    <div class="form-text">Upload a clear profile photo (JPEG/PNG, max 2MB).</div>
+</div>
+
+<div class="row">
+<div class="col-md-6 mb-3">
+<div class="label">Full Name</div>
+<div class="fw-semibold">{{ technician.name }}</div>
+<small class="text-muted">Name cannot be changed</small>
+</div>
+
+<div class="col-md-6 mb-3">
+<div class="label">Email</div>
+<div class="fw-semibold">{{ technician.email }}</div>
+<small class="text-muted">Email cannot be changed</small>
+</div>
+</div>
+
+<div class="row">
+<div class="col-md-6 mb-3">
+<label class="label">Phone</label>
+<input type="text" name="phone" value="{{ technician.phone }}" class="form-control">
+</div>
+
+<div class="col-md-6 mb-3">
+<label class="label">Address</label>
+<input type="text" name="address" value="{{ technician.address }}" class="form-control">
+</div>
+</div>
+
+<div class="mb-3">
+<label class="label">Service Locations</label>
+<input type="text" name="service_locations" value="{{ technician.service_locations }}" class="form-control" placeholder="e.g., Aluva, Kochi, Perumbavoor">
+<small class="text-muted">Enter nearby locations separated by commas</small>
+</div>
+
+<div class="row">
+<div class="col-md-6 mb-3">
+<label class="label">Specialization</label>
+<select name="skill" class="form-control">
+    <option value="AC Repair" {% if technician.skill == "AC Repair" %}selected{% endif %}>AC Repair</option>
+    <option value="Refrigerator Repair" {% if technician.skill == "Refrigerator Repair" %}selected{% endif %}>Refrigerator Repair</option>
+    <option value="Washing Machine Repair" {% if technician.skill == "Washing Machine Repair" %}selected{% endif %}>Washing Machine Repair</option>
+    <option value="Microwave Repair" {% if technician.skill == "Microwave Repair" %}selected{% endif %}>Microwave Repair</option>
+    <option value="Television Repair" {% if technician.skill == "Television Repair" %}selected{% endif %}>Television Repair</option>
+    <option value="Plumbing" {% if technician.skill == "Plumbing" %}selected{% endif %}>Plumbing</option>
+    <option value="Electrical Work" {% if technician.skill == "Electrical Work" %}selected{% endif %}>Electrical Work</option>
+    <option value="Others" {% if technician.skill not in "AC Repair,Refrigerator Repair,Washing Machine Repair,Microwave Repair,Television Repair,Plumbing,Electrical Work" %}selected{% endif %}>Others</option>
+</select>
+</div>
+
+<div class="col-md-6 mb-3">
+<label class="label">Years of Experience</label>
+<input type="number" name="experience_years" value="{{ technician.experience_years }}" class="form-control" min="0">
+</div>
+</div>
+
+<button type="submit" class="btn btn-success mt-3">
+    Save Changes
+</button>
+
+</form>
+
+</div>
+</div>
+</div>
+
+{% include 'homeservice/_logout_modal.html' %}
+</body>
+</html>
