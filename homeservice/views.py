@@ -318,11 +318,37 @@ def findservice(request):
             problem_description=problem,
             address=address_input,
             location=location_for_matching,  # Add selected area (or address) for technician matching
-            status="pending",
+            status="open",  # immediately open so technicians may be notified
         )
         logger.info("Created ServiceRequest %s for user %s: %s / %s / %s", job.id, request.user.id, appliance, problem, address_input)
 
-        messages.success(request, "Service request submitted successfully!")
+        # notify eligible technicians right away (replacement for admin "send" step)
+        from .utils import get_eligible_technicians_for_request
+        eligible_technicians = get_eligible_technicians_for_request(job.location)
+        login_url = request.build_absolute_uri(reverse('login'))
+        for tech in eligible_technicians:
+            try:
+                # build a link that directs technician to accept the specific job
+                accept_link = request.build_absolute_uri(reverse('accept_job', args=[job.id]))
+                # ensure login page redirects after authentication
+                link = f"{login_url}?next={accept_link}"
+                send_mail(
+                    "New Service Job Available",
+                    (
+                        f"A new {job.service_type} job is available at {job.address}.\n\n"
+                        f"Problem: {job.problem_description}\n\n"
+                        "Click the link below to view and accept the job:\n"
+                        f"{link}\n\n"
+                        "If you are not logged in you will be prompted to do so."
+                    ),
+                    settings.DEFAULT_FROM_EMAIL,
+                    [tech.user.email],
+                    fail_silently=True,
+                )
+            except Exception:
+                logger.exception("Failed to send notification for ServiceRequest %s to technician %s", job.id, tech.id)
+
+        messages.success(request, "Service request submitted successfully! Technicians have been notified.")
         return redirect("dashboard")
 
     return render(request, "homeservice/findservice.html", {"customer": customer, "areas": areas})
@@ -372,35 +398,23 @@ def recentservices(request):
 
 
 # ---------------- ADMIN DASHBOARD ----------------
+from django.views.decorators.http import require_GET
+
 @login_required
 @csrf_protect
+@require_GET  # dashboard never needs to handle POST now
 def admindashboard(request):
     if not request.user.is_superuser:
         return redirect('dashboard')
 
+    # Service requests are automatically opened & emailed when created
+    # in `findservice` view, so the old manual "send" form is gone.
+    # the POST branch that used to exist has been removed completely
+    # to avoid any CSRF issues; any legacy pending jobs should already
+    # have been handled by the nightly backfill script.
+
     # All service requests (no filters)
     requests = ServiceRequest.objects.all().order_by('-created_at').select_related('technician', 'rating_obj', 'user__customer')
-
-    if request.method == "POST":
-        request_id = request.POST.get("request_id")
-
-        job = get_object_or_404(ServiceRequest, id=request_id, status="pending")
-        job.status = "open"
-        job.save()
-        logger.info("Admin %s set ServiceRequest %s to open", request.user.id, job.id)
-
-        # Send email notifications to eligible technicians in nearby areas
-        from .utils import get_eligible_technicians_for_request
-        eligible_technicians = get_eligible_technicians_for_request(job.address)
-        
-        for tech in eligible_technicians:
-            send_mail(
-                "New Service Job Available",
-                f"A new {job.service_type} job is available at {job.address}.\n\nProblem: {job.problem_description}\n\nLogin to your dashboard to accept this job.",
-                settings.DEFAULT_FROM_EMAIL,
-                [tech.user.email],
-                fail_silently=True
-            )
 
     # One-time admin notifications for new technician signups
     new_techs = Technician.objects.filter(is_approved=False, admin_notified=False)
