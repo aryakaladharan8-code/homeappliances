@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -25,7 +26,16 @@ SECRET_KEY = 'django-insecure-vf^v10tl9wk9=q5(=^7uo8=$gv%0*=a*0%irsa)zmqg_!4qi$w
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["*"]
+# In production, list the hostnames your site is served from.
+# For Render this should include your render domain.
+# Use ALLOWED_HOSTS env var when set (comma-separated), otherwise default to these.
+ALLOWED_HOSTS = [
+    host.strip() for host in os.environ.get(
+        "ALLOWED_HOSTS",
+        "homeappliances-1qf6.onrender.com,localhost,127.0.0.1",
+    ).split(",")
+    if host.strip()
+]
 
 
 # Application definition
@@ -42,6 +52,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -115,8 +126,15 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 
+# Where collectstatic will gather all files for production
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+# Use WhiteNoise storage for compressed static files in production
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+# Additional directories to search for static assets (development)
 STATICFILES_DIRS = [
     BASE_DIR / "static",
 ]
