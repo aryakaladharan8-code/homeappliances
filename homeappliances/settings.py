@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-vf^v10tl9wk9=q5(=^7uo8=$gv%0*=a*0%irsa)zmqg_!4qi$w
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["*"]
 
 
 # Application definition
@@ -139,3 +139,6 @@ EMAIL_HOST_USER = 'aryakaladharan8@gmail.com'
 EMAIL_HOST_PASSWORD = 'kjne ccgb mosn yrri'
 
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+
+# Production site URL (used for generating absolute links in emails)
+SITE_URL = "https://homeappliances-1qf6.onrender.com"

@@ -325,11 +325,19 @@ def findservice(request):
         # notify eligible technicians right away (replacement for admin "send" step)
         from .utils import get_eligible_technicians_for_request
         eligible_technicians = get_eligible_technicians_for_request(job.location)
-        login_url = request.build_absolute_uri(reverse('login'))
+
+        # Use the configured SITE_URL for emails (falls back to request build if missing)
+        site_url = getattr(settings, "SITE_URL", None)
+        if site_url:
+            site_url = site_url.rstrip("/")
+        else:
+            site_url = request.build_absolute_uri("/").rstrip("/")
+
+        login_url = f"{site_url}{reverse('login')}"
         for tech in eligible_technicians:
             try:
                 # build a link that directs technician to accept the specific job
-                accept_link = request.build_absolute_uri(reverse('accept_job', args=[job.id]))
+                accept_link = f"{site_url}{reverse('accept_job', args=[job.id])}"
                 # ensure login page redirects after authentication
                 link = f"{login_url}?next={accept_link}"
                 send_mail(
@@ -339,7 +347,8 @@ def findservice(request):
                         f"Problem: {job.problem_description}\n\n"
                         "Click the link below to view and accept the job:\n"
                         f"{link}\n\n"
-                        "If you are not logged in you will be prompted to do so."
+                        "If you are not logged in you will be prompted to do so.\n\n"
+                        f"Or visit: {site_url}\n"
                     ),
                     settings.DEFAULT_FROM_EMAIL,
                     [tech.user.email],
