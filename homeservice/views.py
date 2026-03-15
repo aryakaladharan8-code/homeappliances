@@ -340,16 +340,24 @@ def findservice(request):
                 accept_link = f"{site_url}{reverse('accept_job', args=[job.id])}"
                 # ensure login page redirects after authentication
                 link = f"{login_url}?next={accept_link}"
+
+                # Compose a detailed notification with a single actionable link
+                customer_name = request.user.get_full_name() or request.user.username
+                customer_phone = customer.phone or "(not provided)"
+
+                email_body = (
+                    f"New service request (Job #{job.id}) is available.\n\n"
+                    f"Service: {job.service_type}\n"
+                    f"Problem: {job.problem_description}\n"
+                    f"Address: {job.address}\n"
+                    f"Customer: {customer_name}\n"
+                    f"Customer phone: {customer_phone}\n\n"
+                    f"Open the technician portal to accept the job:\n{link}\n"
+                )
+
                 send_mail(
                     "New Service Job Available",
-                    (
-                        f"A new {job.service_type} job is available at {job.address}.\n\n"
-                        f"Problem: {job.problem_description}\n\n"
-                        "Click the link below to view and accept the job:\n"
-                        f"{link}\n\n"
-                        "If you are not logged in you will be prompted to do so.\n\n"
-                        f"Or visit: {site_url}\n"
-                    ),
+                    email_body,
                     settings.DEFAULT_FROM_EMAIL,
                     [tech.user.email],
                     fail_silently=True,
@@ -1466,3 +1474,27 @@ def my_jobs(request):
         "completed_jobs": completed_jobs,
         "active_page": "jobs",
     })
+from .utils import send_sms
+
+def submit_service_request(request):
+
+    # after saving the request
+    service_type = request.POST.get("service_type")
+    user_location = request.POST.get("location")
+
+    message = f"""
+New Home Appliance Service Request
+
+Service: {service_type}
+Location: {user_location}
+
+Full request details have been sent to your email.
+Please login to the portal.
+
+https://homeappliances-1qf6.onrender.com
+"""
+
+    technicians = Technician.objects.filter(service_area=user_location)
+
+    for tech in technicians:
+        send_sms(tech.phone_number, message)

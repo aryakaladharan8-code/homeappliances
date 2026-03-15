@@ -128,3 +128,19 @@ def update_technician_status():
     """Update technician status - call this when technician logs in or accesses dashboard"""
     today = now().date()
     Technician.objects.filter(subscription_expiry__lt=today).update(is_active=False)
+
+import os
+from twilio.rest import Client
+
+def send_sms(phone, message):
+
+    account_sid = os.environ.get("TWILIO_ACCOUNT_SID")
+    auth_token = os.environ.get("TWILIO_AUTH_TOKEN")
+
+    client = Client(account_sid, auth_token)
+
+    client.messages.create(
+        body=message,
+        from_="+16562695997",
+        to=phone
+    )

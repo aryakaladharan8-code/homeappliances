@@ -129,7 +129,7 @@ USE_TZ = True
 STATIC_URL = '/static/'
 
 # Where collectstatic will gather all files for production
-STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATIC_ROOT = 'staticfiles'
 
 # Use WhiteNoise storage for compressed static files in production
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
