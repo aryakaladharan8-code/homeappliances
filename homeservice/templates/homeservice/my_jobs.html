@@ -26,9 +26,10 @@
             padding:25px 18px; 
             overflow-y:auto; 
             scrollbar-width:thin; 
-            position:sticky; 
+            position:fixed; 
             top:0; 
             height:100vh; 
+            z-index:1000;
         }
 
         .brand { 
@@ -112,18 +113,17 @@
             background:#f9fbff; 
         }
 
+        .flex-grow-1 {
+            margin-left: 250px;
+        }
+
         /* ===== Responsive ===== */
         @media(max-width:767px){
-            .d-flex {
-                flex-direction: column;
-            }
-            .sidebar {
-                width: 100%;
-                height: auto;
-                position: relative;
-                order: -1;
+            .sidebar{
+                width: 180px;
             }
             .flex-grow-1{
+                margin-left: 180px;
                 padding:25px;
             }
         }

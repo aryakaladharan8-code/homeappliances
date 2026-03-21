@@ -21,7 +21,7 @@ body {
 }
 
 /* ===== Sidebar (UNCHANGED) ===== */
-.sidebar { width:250px; background:white; border-right:1px solid #e5e7eb; padding:25px 18px; position:sticky; top:0; height:100vh; }
+.sidebar { width:250px; background:white; border-right:1px solid #e5e7eb; padding:25px 18px; position:fixed; top:0; height:100vh; z-index:1000; }
 .brand { font-size:22px; font-weight:700; color:#2d347d; }
 
 .menu a { 
@@ -127,17 +127,16 @@ h3 {
     font-weight:600;
 }
 
+.flex-grow-1 {
+    margin-left: 250px;
+}
+
 @media(max-width:767px){
-    .d-flex {
-        flex-direction: column;
-    }
-    .sidebar {
-        width: 100%;
-        height: auto;
-        position: relative;
-        order: -1;
+    .sidebar{
+        width: 180px;
     }
     .flex-grow-1{
+        margin-left: 180px;
         padding:25px;
     }
 }
