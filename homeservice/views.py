@@ -296,6 +296,8 @@ def findservice(request):
         # Prefer area select if chosen, otherwise fallback to location input
         selected_area = request.POST.get('area', '').strip()
         address_input = request.POST.get("location")
+        preferred_date_str = request.POST.get("preferred_date")
+        preferred_time_str = request.POST.get("preferred_time")
 
         # Keep the full address the user typed as the ServiceRequest.address
         # Use the selected area only for matching (ServiceRequest.location)
@@ -309,6 +311,16 @@ def findservice(request):
 
         if problem == "other_problem":
             problem = request.POST.get("other_problem")
+
+        # Parse preferred date and time
+        preferred_date = None
+        preferred_time = None
+        if preferred_date_str:
+            from datetime import datetime
+            preferred_date = datetime.strptime(preferred_date_str, '%Y-%m-%d').date()
+        if preferred_time_str:
+            from datetime import datetime
+            preferred_time = datetime.strptime(preferred_time_str, '%H:%M').time()
 
         # Defensive check: prevent near-duplicate submissions (e.g., double clicks)
         from datetime import timedelta
@@ -331,6 +343,8 @@ def findservice(request):
             problem_description=problem,
             address=address_input,
             location=location_for_matching,  # Add selected area (or address) for technician matching
+            preferred_date=preferred_date,
+            preferred_time=preferred_time,
             status="open",  # immediately open so technicians may be notified
         )
         logger.info("Created ServiceRequest %s for user %s: %s / %s / %s", job.id, request.user.id, appliance, problem, address_input)

@@ -149,6 +149,20 @@
             <div class="form-text text-muted">You can edit the address after selecting an area for more accuracy.</div>
         </div>
 
+        <!-- Preferred Date and Time -->
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Preferred Date</label>
+                <input type="date" class="form-control" name="preferred_date" required>
+                <div class="form-text text-muted">When would you like the service?</div>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Preferred Time</label>
+                <input type="time" class="form-control" name="preferred_time" required>
+                <div class="form-text text-muted">What time works best for you?</div>
+            </div>
+        </div>
+
         <div class="text-center mt-4">
             <button type="submit" id="submitBtn" class="btn btn-primary px-4">Submit Request</button>
             <a href="/dashboard/" class="btn btn-outline-secondary px-4">Cancel</a>
