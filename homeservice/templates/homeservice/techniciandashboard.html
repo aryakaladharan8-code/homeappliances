@@ -30,6 +30,22 @@
         .rating-stars .star { color: #ddd; font-size: 16px; }
         .rating-stars .star.filled { color: #ffc107; }
         .table tbody tr:hover { background:#fbfcff; transform: translateY(-1px); }
+
+        /* Mobile responsiveness */
+        @media (max-width: 767px) {
+            .d-flex {
+                flex-direction: column;
+            }
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+                order: -1; /* Move sidebar to top */
+            }
+            .flex-grow-1 {
+                padding: 20px;
+            }
+        }
     </style>
 </head>
 

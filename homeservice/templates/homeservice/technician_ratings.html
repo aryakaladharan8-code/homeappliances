@@ -149,9 +149,15 @@
         }
 
         /* ===== RESPONSIVE ===== */
-        @media(max-width:991px){
-            .sidebar{
-                display:none;
+        @media(max-width:767px){
+            .d-flex {
+                flex-direction: column;
+            }
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+                order: -1;
             }
             .flex-grow-1{
                 padding:25px;
