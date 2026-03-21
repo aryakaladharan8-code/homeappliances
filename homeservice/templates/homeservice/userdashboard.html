@@ -130,6 +130,84 @@
                 </div>
             </div>
 
+            <!-- Rescheduled Requests -->
+            {% if rescheduled_requests %}
+            <div class="card bg-white mb-4">
+                <div class="card-body">
+                    <h6 class="mb-3">Rescheduled Requests</h6>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Service</th>
+                                    <th>Location</th>
+                                    <th>Preferred</th>
+                                    <th>Suggested</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in rescheduled_requests %}
+                                <tr>
+                                    <td>{{ forloop.counter }}</td>
+                                    <td>{{ item.appliance_name }}</td>
+                                    <td>{{ item.address }}</td>
+                                    <td>{{ item.preferred_date|date:'d M Y' }} {{ item.preferred_time|time:'h:i A' }}</td>
+                                    <td>{% if item.suggested_date and item.suggested_time %}{{ item.suggested_date|date:'d M Y' }} {{ item.suggested_time|time:'h:i A' }}{% else %}-{% endif %}</td>
+                                    <td>
+                                        <form method="post" action="{% url 'respond_reschedule' item.id %}" class="d-inline">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="action" value="accept" />
+                                            <button class="btn btn-success btn-sm">Accept</button>
+                                        </form>
+                                        <form method="post" action="{% url 'respond_reschedule' item.id %}" class="d-inline">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="action" value="reject" />
+                                            <button class="btn btn-danger btn-sm">Reject</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Reassign Requests -->
+            {% if reassign_requests %}
+            <div class="card bg-white mb-4">
+                <div class="card-body">
+                    <h6 class="mb-3">Select a New Technician</h6>
+                    {% for item in reassign_requests %}
+                        <div class="border rounded p-3 mb-2">
+                            <div><strong>Request #{{ item.id }}:</strong> {{ item.appliance_name }} - {{ item.address }}</div>
+                            <form method="post" action="{% url 'user_assign_technician' item.id %}">
+                                {% csrf_token %}
+                                <div class="row g-2 align-items-center mt-2">
+                                    <div class="col-md-6">
+                                        <select name="technician_id" class="form-select form-select-sm" required>
+                                            <option value="">Select technician</option>
+                                            {% for tech in item.eligible_technicians %}
+                                                <option value="{{ tech.id }}">{{ tech.name }} ({{ tech.service_locations }})</option>
+                                            {% empty %}
+                                                <option value="">No eligible technicians</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="col-auto">
+                                        <button class="btn btn-primary btn-sm">Assign</button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
             <!-- Recent Requests -->
             <div class="card bg-white mb-4">
                 <div class="card-body">
@@ -170,6 +248,12 @@
                                                 <span class="badge bg-success">Completed</span>
                                             {% elif status == 'open' %}
                                                 <span class="badge bg-info text-dark">Open</span>
+                                            {% elif status == 'rescheduled' %}
+                                                <span class="badge bg-warning text-dark">Rescheduled</span>
+                                            {% elif status == 'accepted' %}
+                                                <span class="badge bg-success">Accepted</span>
+                                            {% elif status == 'reschedule_rejected' %}
+                                                <span class="badge bg-danger">Reschedule Rejected</span>
                                             {% else %}
                                                 <span class="badge bg-secondary">{{ item.get_status_display|default:item.status|default:'Unknown' }}</span>
                                             {% endif %}

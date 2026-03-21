@@ -217,12 +217,25 @@ def dashboard(request):
     completed_count = requests_qs.filter(status__iexact="completed").count()
     total_requests = requests_qs.count()  # include all statuses
 
+    reassign_requests = ServiceRequest.objects.filter(
+        user=request.user,
+        technician__isnull=True,
+        status__in=['pending', 'reschedule_rejected'],
+    )
+    rescheduled_requests = ServiceRequest.objects.filter(user=request.user, status="rescheduled")
+
+    from .utils import get_eligible_technicians_for_request
+    for req in reassign_requests:
+        req.eligible_technicians = get_eligible_technicians_for_request(req.location)
+
     context = {
         "pending": pending_count,
         "open": open_count,
         "progress": progress_count,
         "completed": completed_count,
         "recent_requests": requests_qs.order_by("-created_at")[:10],
+        "rescheduled_requests": rescheduled_requests,
+        "reassign_requests": reassign_requests,
         "total_requests": total_requests,
         "complete_profile_needed": complete_profile_needed,
         "customer": customer,
@@ -828,6 +841,127 @@ def complete_job(request, job_id):
 
 
 @login_required
+@csrf_protect
+def respond_reschedule(request, request_id):
+    service_request = get_object_or_404(ServiceRequest, id=request_id, user=request.user)
+
+    if service_request.status != 'rescheduled':
+        messages.error(request, 'This request is not waiting for your reschedule response.')
+        return redirect('dashboard')
+
+    action = request.POST.get('action')
+    if action == 'accept':
+        service_request.status = 'accepted'
+        service_request.save()
+
+        # Notify technician
+        technician = Technician.objects.filter(user=service_request.technician).first()
+        if technician and technician.user.email:
+            site_url = get_site_url(request)
+            tech_dashboard = f"{site_url}{reverse('techniciandashboard')}"
+            send_mail(
+                'Reschedule accepted by user',
+                (
+                    f"Hello {technician.name},\n\n"
+                    f"User {request.user.get_full_name() or request.user.username} accepted the suggested time for request #{service_request.id}.\n"
+                    f"Suggested date: {service_request.suggested_date.strftime('%d %B %Y')}\n"
+                    f"Suggested time: {service_request.suggested_time.strftime('%I:%M %p')}\n\n"
+                    f"See details: {tech_dashboard}\n"
+                ),
+                settings.DEFAULT_FROM_EMAIL,
+                [technician.user.email],
+                fail_silently=True,
+            )
+
+        messages.success(request, 'Suggested time accepted.')
+        return redirect('dashboard')
+
+    if action == 'reject':
+        previous_technician = service_request.technician
+        service_request.technician = None
+        service_request.status = 'reschedule_rejected'
+        # Keep suggested_date/time for audit/history, but could be cleared if not needed
+        service_request.save()
+
+        # Notify previous technician
+        technician = Technician.objects.filter(user=previous_technician).first()
+        if technician and technician.user.email:
+            send_mail(
+                'Reschedule rejected by user',
+                (
+                    f"Hello {technician.name},\n\n"
+                    f"User {request.user.get_full_name() or request.user.username} rejected the suggested time for request #{service_request.id}.\n"
+                    f"The service request has been reopened for re-assignment.\n"
+                ),
+                settings.DEFAULT_FROM_EMAIL,
+                [technician.user.email],
+                fail_silently=True,
+            )
+
+        messages.success(request, 'Suggested time rejected. You can select a new technician below.')
+        return redirect('dashboard')
+
+    messages.error(request, 'Invalid action.')
+    return redirect('dashboard')
+
+
+@login_required
+@csrf_protect
+def user_assign_technician(request, request_id):
+    service_request = get_object_or_404(
+        ServiceRequest,
+        id=request_id,
+        user=request.user,
+        technician__isnull=True,
+        status__in=['pending', 'reschedule_rejected'],
+    )
+
+    if request.method == 'POST':
+        technician_id = request.POST.get('technician_id')
+        technician = get_object_or_404(Technician, id=technician_id, is_active=True, is_approved=True)
+
+        # verify eligibility by location
+        eligible = False
+        from .utils import get_eligible_technicians_for_request
+        eligible_techs = get_eligible_technicians_for_request(service_request.location)
+        if technician in eligible_techs:
+            eligible = True
+
+        if not eligible:
+            messages.error(request, 'Selected technician is not eligible at this location.')
+            return redirect('dashboard')
+
+        service_request.technician = technician.user
+        service_request.status = 'pending'
+        service_request.suggested_date = None
+        service_request.suggested_time = None
+        service_request.save()
+
+        # notify technician about assignment request
+        site_url = get_site_url(request)
+        tech_login = f"{site_url}{reverse('technicianlogin')}"
+        send_mail(
+            'New Service Request Assigned',
+            (
+                f"Hello {technician.name},\n\n"
+                f"A customer has selected you for service request #{service_request.id}.\n"
+                f"Preferred date: {service_request.preferred_date.strftime('%d %B %Y')}\n"
+                f"Preferred time: {service_request.preferred_time.strftime('%I:%M %p')}\n\n"
+                f"Please respond from your dashboard: {tech_login}\n"
+            ),
+            settings.DEFAULT_FROM_EMAIL,
+            [technician.user.email],
+            fail_silently=True,
+        )
+
+        messages.success(request, 'Technician selection submitted. Await technician response.')
+        return redirect('dashboard')
+
+    messages.error(request, 'Invalid request method.')
+    return redirect('dashboard')
+
+
+@login_required
 def customerlist(request):
     """
     Show ONLY real customers.
@@ -1132,7 +1266,88 @@ def reset_password_customer(request, token):
 @login_required
 def techniciandashboard(request):
     technician = get_object_or_404(Technician, user=request.user, is_approved=True)
-    
+
+    # Technician responses: accept / reschedule from available or pending assignment
+    if request.method == 'POST':
+        job_id = request.POST.get('job_id')
+        action = request.POST.get('action')
+        if action == 'reschedule':
+            job = get_object_or_404(ServiceRequest, id=job_id)
+        else:
+            job = get_object_or_404(ServiceRequest, id=job_id, technician=request.user)
+
+        if action == 'accept':
+            if job.status in ['open']:
+                # Take the job from available list
+                job.technician = request.user
+                job.status = 'pending'
+                job.save()
+                messages.success(request, 'Job taken for review. Please confirm or suggest new time from pending jobs.')
+                return redirect('techniciandashboard')
+
+            if job.status == 'pending':
+                job.status = 'accepted'
+                job.save()
+
+                # Notify user
+                site_url = get_site_url(request)
+                user_dashboard = f"{site_url}{reverse('dashboard')}"
+                pref_date_text = job.preferred_date.strftime('%d %B %Y') if job.preferred_date else 'N/A'
+                pref_time_text = job.preferred_time.strftime('%I:%M %p') if job.preferred_time else 'N/A'
+                send_mail(
+                    "Service Request Accepted",
+                    (
+                        f"Hello {job.user.first_name or job.user.username},\n\n"
+                        f"Your service request #{job.id} has been accepted by the technician {technician.name}.\n"
+                        f"Scheduled date: {pref_date_text}\n"
+                        f"Scheduled time: {pref_time_text}\n\n"
+                        f"You can view updates here: {user_dashboard}\n"
+                    ),
+                    settings.DEFAULT_FROM_EMAIL,
+                    [job.user.email],
+                    fail_silently=True,
+                )
+
+                messages.success(request, "Request accepted and user notified.")
+                return redirect('techniciandashboard')
+
+        if action == 'reschedule':
+            suggested_date = request.POST.get('suggested_date')
+            suggested_time = request.POST.get('suggested_time')
+            if not suggested_date or not suggested_time:
+                messages.error(request, "Please provide suggested date and time for rescheduling.")
+                return redirect('techniciandashboard')
+
+            from datetime import datetime
+            job.suggested_date = datetime.strptime(suggested_date, '%Y-%m-%d').date()
+            job.suggested_time = datetime.strptime(suggested_time, '%H:%M').time()
+            job.status = 'rescheduled'
+            job.technician = request.user
+            job.save()
+
+            site_url = get_site_url(request)
+            user_dashboard = f"{site_url}{reverse('dashboard')}"
+            pref_date_text = job.preferred_date.strftime('%d %B %Y') if job.preferred_date else 'N/A'
+            pref_time_text = job.preferred_time.strftime('%I:%M %p') if job.preferred_time else 'N/A'
+            send_mail(
+                "Service Request Rescheduled",
+                (
+                    f"Hello {job.user.first_name or job.user.username},\n\n"
+                    f"Technician {technician.name} has suggested a new schedule for your request #{job.id}.\n"
+                    f"Original date: {pref_date_text}\n"
+                    f"Original time: {pref_time_text}\n"
+                    f"Suggested date: {job.suggested_date.strftime('%d %B %Y')}\n"
+                    f"Suggested time: {job.suggested_time.strftime('%I:%M %p')}\n\n"
+                    f"Please review in your dashboard: {user_dashboard}\n"
+                ),
+                settings.DEFAULT_FROM_EMAIL,
+                [job.user.email],
+                fail_silently=True,
+            )
+
+            messages.success(request, "Suggestion sent to user and status updated to rescheduled.")
+            return redirect('techniciandashboard')
+
     # Update technician status (auto-block if expired)
     update_technician_status()
     
@@ -1150,15 +1365,19 @@ def techniciandashboard(request):
         q_objects |= Q(address__icontains=area)
     available_jobs = ServiceRequest.objects.filter(status="open").filter(q_objects)
     
-    # Only show assigned jobs and completed jobs from last 7 days
+    # Only show assigned/pending jobs and completed jobs from last 7 days
     from django.utils import timezone
     seven_days_ago = timezone.now() - timezone.timedelta(days=7)
     my_jobs = ServiceRequest.objects.filter(
         technician=request.user
     ).exclude(
-        status="completed", 
+        status="completed",
         completed_at__lt=seven_days_ago
     )
+
+    pending_jobs = ServiceRequest.objects.filter(technician=request.user, status="pending")
+    rescheduled_jobs = ServiceRequest.objects.filter(technician=request.user, status="rescheduled")
+    accepted_jobs = ServiceRequest.objects.filter(technician=request.user, status="accepted")
 
     return render(
         request,
@@ -1166,6 +1385,9 @@ def techniciandashboard(request):
         {
             "technician": technician,
             "available_jobs": available_jobs,
+            "pending_jobs": pending_jobs,
+            "rescheduled_jobs": rescheduled_jobs,
+            "accepted_jobs": accepted_jobs,
             "services": my_jobs,
             "total_jobs": ServiceRequest.objects.filter(technician=request.user).count(),
             "inprogress_jobs": ServiceRequest.objects.filter(technician=request.user, status__iexact="assigned").count(),

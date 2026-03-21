@@ -71,6 +71,9 @@ class ServiceRequest(models.Model):
         ('pending', 'Pending'),
         ('open', 'Open for Technicians'),
         ('assigned', 'Assigned'),
+        ('rescheduled', 'Rescheduled'),
+        ('accepted', 'Accepted by User'),
+        ('reschedule_rejected', 'Reschedule Rejected'),
         ('completed', 'Completed'),
     ]
 

@@ -38,10 +38,20 @@
                     <td>
                         {% if item.status == 'pending' %}
                             <span class="badge bg-warning text-dark">Pending</span>
+                        {% elif item.status == 'open' %}
+                            <span class="badge bg-info text-dark">Open</span>
                         {% elif item.status == 'assigned' %}
                             <span class="badge bg-primary">In Progress</span>
+                        {% elif item.status == 'rescheduled' %}
+                            <span class="badge bg-warning text-dark">Rescheduled</span>
+                        {% elif item.status == 'accepted' %}
+                            <span class="badge bg-success">Accepted</span>
+                        {% elif item.status == 'reschedule_rejected' %}
+                            <span class="badge bg-danger">Reschedule Rejected</span>
                         {% elif item.status == 'completed' %}
                             <span class="badge bg-success">Completed</span>
+                        {% else %}
+                            <span class="badge bg-secondary">{{ item.get_status_display|default:item.status|default:'Unknown' }}</span>
                         {% endif %}
                     </td>
                     <td>{{ item.created_at|date:"M d, Y" }}</td>

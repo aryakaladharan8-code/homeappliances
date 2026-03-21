@@ -57,6 +57,8 @@ urlpatterns = [
     path('technician_ratings/', views.technician_ratings, name='technician_ratings'),
     path('technician_payment/', views.technician_payment, name='technician_payment'),
     path('technician_profile/', views.technician_profile, name='technician_profile'),
+    path('respond_reschedule/<int:request_id>/', views.respond_reschedule, name='respond_reschedule'),
+    path('user_assign_technician/<int:request_id>/', views.user_assign_technician, name='user_assign_technician'),
 
 
     

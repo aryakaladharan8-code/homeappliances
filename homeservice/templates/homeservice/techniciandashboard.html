@@ -114,6 +114,7 @@
                             <th>Service</th>
                             <th>Problem</th>
                             <th>Address</th>
+                            <th>Preferred</th>
                             <th>Action</th>
                         </tr>
                         </thead>
@@ -121,18 +122,38 @@
                         {% for job in available_jobs %}
                         <tr>
                             <td>{{ forloop.counter }}</td>
-                            <td>{{ job.user.first_name }}</td>
+                            <td>{{ job.user.first_name|default:job.user.username }}</td>
                             <td>{{ job.user.customer.phone|default:"N/A" }}</td>
-                            <td>{{ job.service_type }}</td>
-                            <td>{{ job.problem_description }}</td>
+                            <td>{{ job.appliance_name }}</td>
+                            <td>{{ job.problem_description|truncatewords:8 }}</td>
                             <td>{{ job.address }}</td>
+                            <td>{{ job.preferred_date|date:'d M Y' }} {{ job.preferred_time|time:'h:i A' }}</td>
                             <td>
-                                <form method="post" action="{% url 'accept_job' job.id %}">
+                                <form method="post" class="d-inline">
                                     {% csrf_token %}
-                                    <button class="btn btn-success btn-sm">
-                                        Accept Job
-                                    </button>
+                                    <input type="hidden" name="job_id" value="{{ job.id }}" />
+                                    <input type="hidden" name="action" value="accept" />
+                                    <button class="btn btn-success btn-sm">Accept</button>
                                 </form>
+                                <button class="btn btn-warning btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#rescheduleAvailable{{ job.id }}" aria-expanded="false" aria-controls="rescheduleAvailable{{ job.id }}">
+                                    Suggest Reschedule
+                                </button>
+                                <div class="collapse mt-2" id="rescheduleAvailable{{ job.id }}">
+                                    <form method="post" class="row g-2">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="job_id" value="{{ job.id }}" />
+                                        <input type="hidden" name="action" value="reschedule" />
+                                        <div class="col-auto">
+                                            <input type="date" name="suggested_date" class="form-control form-control-sm" required>
+                                        </div>
+                                        <div class="col-auto">
+                                            <input type="time" name="suggested_time" class="form-control form-control-sm" required>
+                                        </div>
+                                        <div class="col-auto">
+                                            <button class="btn btn-primary btn-sm" type="submit">Send</button>
+                                        </div>
+                                    </form>
+                                </div>
                             </td>
                         </tr>
                         {% endfor %}
@@ -142,6 +163,84 @@
                 {% else %}
                 <p class="text-muted">No available jobs right now.</p>
                 {% endif %}
+            </div>
+            {% endif %}
+
+            {% if rescheduled_jobs %}
+            <!-- Pending Reschedule Requests -->
+            <div class="card-box mt-4">
+                <h5 class="mb-3">Pending Reschedule Requests</h5>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Customer</th>
+                            <th>Phone</th>
+                            <th>Service</th>
+                            <th>Problem</th>
+                            <th>Address</th>
+                            <th>Preferred Date</th>
+                            <th>Preferred Time</th>
+                            <th>Status</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for request in rescheduled_jobs %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>{{ request.user.first_name }}</td>
+                            <td>{{ request.user.customer.phone|default:"N/A" }}</td>
+                            <td>{{ request.service_type }}</td>
+                            <td>{{ request.problem_description }}</td>
+                            <td>{{ request.address }}</td>
+                            <td>{{ request.preferred_date|date:"M d, Y" }}</td>
+                            <td>{{ request.preferred_time|time:"H:i" }}</td>
+                            <td><span class="badge-status bg-warning text-dark">Reschedule Requested</span></td>
+                        </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if accepted_jobs %}
+            <!-- Accepted Reschedule Requests -->
+            <div class="card-box mt-4">
+                <h5 class="mb-3">Accepted Reschedule Requests</h5>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Customer</th>
+                            <th>Phone</th>
+                            <th>Service</th>
+                            <th>Problem</th>
+                            <th>Address</th>
+                            <th>Suggested Date</th>
+                            <th>Suggested Time</th>
+                            <th>Status</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for request in accepted_jobs %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>{{ request.user.first_name }}</td>
+                            <td>{{ request.user.customer.phone|default:"N/A" }}</td>
+                            <td>{{ request.service_type }}</td>
+                            <td>{{ request.problem_description }}</td>
+                            <td>{{ request.address }}</td>
+                            <td>{{ request.suggested_date|date:"M d, Y" }}</td>
+                            <td>{{ request.suggested_time|time:"H:i" }}</td>
+                            <td><span class="badge-status bg-info">Rescheduled</span></td>
+                        </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
             {% endif %}
 
