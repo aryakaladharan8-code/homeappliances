@@ -75,99 +75,182 @@
             <div class="row justify-content-center">
                 <div class="col-lg-8 col-md-10 col-12">
                     <div class="box dashboard-card">
-    <h4 class="mb-3">Book a Service</h4>
-    <p class="text-muted mb-4">Choose your appliance and the problem you're facing.</p>
+    {% if available_technicians %}
+        <!-- Step 2: Technician Selection -->
+        <h4 class="mb-3">Select a Technician</h4>
+        <p class="text-muted mb-4">Choose from available technicians in your area. Higher rated technicians are shown first.</p>
 
-    <form method="POST" id="serviceForm">
-        {% csrf_token %}
-
-        <!-- Appliance -->
         <div class="mb-3">
-            <label class="form-label">Select Appliance</label>
-            <select class="form-select" name="appliance_type" id="appliance" required>
-                <option value="">-- Choose Appliance --</option>
-                <option>Air Conditioner (AC)</option>
-                <option>Washing Machine</option>
-                <option>Refrigerator</option>
-                <option>Microwave Oven</option>
-                <option>Television</option>
-                <option>Water Purifier</option>
-                <option>Dishwasher</option>
-                <option>Geyser</option>
-                <option>Gas Stove</option>
-                <option>Mixer/Grinder</option>
-                <option>Ceiling Fan</option>
-                <option>Vacuum Cleaner</option>
-                <option value="other_appliance">Other</option>
-            </select>
+            <strong>Service Details:</strong><br>
+            <span class="text-muted">{{ service_data.appliance }} - {{ service_data.problem }}</span><br>
+            <span class="text-muted">{{ service_data.address_input }}</span><br>
+            <span class="text-muted">Preferred: {{ service_data.preferred_date_str }} at {{ service_data.preferred_time_str }}</span>
         </div>
 
-        <div class="mb-3" id="other_appliance_box" style="display:none;">
-            <label class="form-label">Enter Appliance Name</label>
-            <input type="text" class="form-control" name="other_appliance">
-        </div>
+        <form method="POST" id="technicianForm">
+            {% csrf_token %}
+            <input type="hidden" name="step" value="2">
 
-        <!-- Problem -->
-        <div class="mb-3">
-            <label class="form-label">Problem</label>
-            <select class="form-select" name="problem" id="problem" required>
-                <option value="">-- Choose Problem --</option>
-                <option>Not turning on</option>
-                <option>Making noise</option>
-                <option>Not cooling / Not heating</option>
-                <option>Stopped working suddenly</option>
-                <option>Power supply issue</option>
-                <option>Water leakage</option>
-                <option>Display problem</option>
-                <option>Button not working</option>
-                <option>Low performance</option>
-                <option value="other_problem">Other problem</option>
-            </select>
-        </div>
-
-        <div class="mb-3" id="other_problem_box" style="display:none;">
-            <label class="form-label">Describe your problem</label>
-            <input type="text" class="form-control" name="other_problem">
-        </div>
-
-        <!-- Technician Area (dropdown) -->
-        <div class="mb-3">
-            <label class="form-label">Service Area </label>
-            <select class="form-select" name="area" id="areaSelect">
-                <option value="">-- Choose an area --</option>
-                {% for area in areas %}
-                    <option value="{{ area }}">{{ area }}</option>
-                {% endfor %}
-            </select>
-            <div class="form-text text-muted">Note: only the areas listed above are available for technician matching.</div>
-        </div>
-
-        <!-- Location (auto-filled) -->
-        <div class="mb-3">
-            <label class="form-label">Location (Full address)</label>
-            <input type="text" class="form-control" name="location" id="locationInput" value="{{ customer.location }}" placeholder="Street, Area, City, State, Pincode" required>
-            <div class="form-text text-muted">You can edit the address after selecting an area for more accuracy.</div>
-        </div>
-
-        <!-- Preferred Date and Time -->
-        <div class="row">
-            <div class="col-md-6 mb-3">
-                <label class="form-label">Preferred Date</label>
-                <input type="date" class="form-control" name="preferred_date" required>
-                <div class="form-text text-muted">When would you like the service?</div>
+            {% for tech_data in available_technicians %}
+            <div class="technician-card mb-3 p-3 border rounded">
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="selected_technician" value="{{ tech_data.technician.id }}" id="tech_{{ tech_data.technician.id }}" required>
+                    <label class="form-check-label w-100" for="tech_{{ tech_data.technician.id }}">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <strong>{{ tech_data.technician.name }}</strong>
+                                <div class="text-muted small">
+                                    {% if tech_data.technician.skill %}
+                                        <span class="badge bg-primary">{{ tech_data.technician.skill }}</span>
+                                    {% endif %}
+                                    {% if tech_data.technician.experience_years %}
+                                        <span class="badge bg-secondary">{{ tech_data.technician.experience_years }} years exp.</span>
+                                    {% endif %}
+                                </div>
+                                <div class="mt-1">
+                                    <span class="text-warning">
+                                        {% for i in "12345" %}
+                                            {% if tech_data.avg_rating >= forloop.counter %}
+                                                ★
+                                            {% else %}
+                                                ☆
+                                            {% endif %}
+                                        {% endfor %}
+                                    </span>
+                                    <small class="text-muted">({{ tech_data.avg_rating|floatformat:1 }} stars from {{ tech_data.total_ratings }} reviews)</small>
+                                </div>
+                                <div class="mt-1">
+                                    <small class="text-muted">
+                                        Distance: {{ tech_data.distance }} • {{ tech_data.completed_jobs }} completed jobs
+                                    </small>
+                                </div>
+                            </div>
+                            <div class="text-end">
+                                {% if tech_data.technician.photo %}
+                                    <img src="{{ tech_data.technician.photo.url }}" alt="Technician photo" class="rounded-circle" style="width: 60px; height: 60px; object-fit: cover;">
+                                {% else %}
+                                    <div class="bg-light rounded-circle d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                                        <svg width="30" height="30" viewBox="0 0 24 24" fill="#6c757d">
+                                            <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0 2c-4.418 0-8 2.015-8 4.5V21h16v-2.5c0-2.485-3.582-4.5-8-4.5z"/>
+                                        </svg>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </label>
+                </div>
             </div>
-            <div class="col-md-6 mb-3">
-                <label class="form-label">Preferred Time</label>
-                <input type="time" class="form-control" name="preferred_time" required>
-                <div class="form-text text-muted">What time works best for you?</div>
+            {% empty %}
+            <div class="alert alert-warning">
+                <h5>No technicians available</h5>
+                <p>Sorry, no technicians are currently available in your area for the selected service. Please try a different area or contact support.</p>
             </div>
-        </div>
+            {% endfor %}
 
-        <div class="text-center mt-4">
-            <button type="submit" id="submitBtn" class="btn btn-primary px-4">Submit Request</button>
-            <a href="/dashboard/" class="btn btn-outline-secondary px-4">Cancel</a>
-        </div>
-    </form>
+            {% if available_technicians %}
+            <div class="text-center mt-4">
+                <button type="submit" id="bookBtn" class="btn btn-success px-4">Book Selected Technician</button>
+                <a href="{% url 'findservice' %}" class="btn btn-outline-secondary px-4">Back to Service Details</a>
+            </div>
+            {% endif %}
+        </form>
+    {% else %}
+        <!-- Step 1: Service Details -->
+        <h4 class="mb-3">Book a Service</h4>
+        <p class="text-muted mb-4">Choose your appliance and the problem you're facing.</p>
+
+        <form method="POST" id="serviceForm">
+            {% csrf_token %}
+            <input type="hidden" name="step" value="1">
+
+            <!-- Appliance -->
+            <div class="mb-3">
+                <label class="form-label">Select Appliance</label>
+                <select class="form-select" name="appliance_type" id="appliance" required>
+                    <option value="">-- Choose Appliance --</option>
+                    <option>Air Conditioner (AC)</option>
+                    <option>Washing Machine</option>
+                    <option>Refrigerator</option>
+                    <option>Microwave Oven</option>
+                    <option>Television</option>
+                    <option>Water Purifier</option>
+                    <option>Dishwasher</option>
+                    <option>Geyser</option>
+                    <option>Gas Stove</option>
+                    <option>Mixer/Grinder</option>
+                    <option>Ceiling Fan</option>
+                    <option>Vacuum Cleaner</option>
+                    <option value="other_appliance">Other</option>
+                </select>
+            </div>
+
+            <div class="mb-3" id="other_appliance_box" style="display:none;">
+                <label class="form-label">Enter Appliance Name</label>
+                <input type="text" class="form-control" name="other_appliance">
+            </div>
+
+            <!-- Problem -->
+            <div class="mb-3">
+                <label class="form-label">Problem</label>
+                <select class="form-select" name="problem" id="problem" required>
+                    <option value="">-- Choose Problem --</option>
+                    <option>Not turning on</option>
+                    <option>Making noise</option>
+                    <option>Not cooling / Not heating</option>
+                    <option>Stopped working suddenly</option>
+                    <option>Power supply issue</option>
+                    <option>Water leakage</option>
+                    <option>Display problem</option>
+                    <option>Button not working</option>
+                    <option>Low performance</option>
+                    <option value="other_problem">Other problem</option>
+                </select>
+            </div>
+
+            <div class="mb-3" id="other_problem_box" style="display:none;">
+                <label class="form-label">Describe your problem</label>
+                <input type="text" class="form-control" name="other_problem">
+            </div>
+
+            <!-- Technician Area (dropdown) -->
+            <div class="mb-3">
+                <label class="form-label">Service Area </label>
+                <select class="form-select" name="area" id="areaSelect">
+                    <option value="">-- Choose an area --</option>
+                    {% for area in areas %}
+                        <option value="{{ area }}">{{ area }}</option>
+                    {% endfor %}
+                </select>
+                <div class="form-text text-muted">Note: only the areas listed above are available for technician matching.</div>
+            </div>
+
+            <!-- Location (auto-filled) -->
+            <div class="mb-3">
+                <label class="form-label">Location (Full address)</label>
+                <input type="text" class="form-control" name="location" id="locationInput" value="{{ customer.location }}" placeholder="Street, Area, City, State, Pincode" required>
+                <div class="form-text text-muted">You can edit the address after selecting an area for more accuracy.</div>
+            </div>
+
+            <!-- Preferred Date and Time -->
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Preferred Date</label>
+                    <input type="date" class="form-control" name="preferred_date" required>
+                    <div class="form-text text-muted">When would you like the service?</div>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Preferred Time</label>
+                    <input type="time" class="form-control" name="preferred_time" required>
+                    <div class="form-text text-muted">What time works best for you?</div>
+                </div>
+            </div>
+
+            <div class="text-center mt-4">
+                <button type="submit" id="submitBtn" class="btn btn-primary px-4">Find Available Technicians</button>
+                <a href="/dashboard/" class="btn btn-outline-secondary px-4">Cancel</a>
+            </div>
+        </form>
+    {% endif %}
     <div class="text-center mt-3">
         <a href="{% url 'dashboard' %}" class="btn btn-outline-primary">← Back to Dashboard</a>
     </div>
@@ -214,10 +297,22 @@
     // Prevent double submission: disable submit button after first click
     const serviceForm = document.getElementById('serviceForm');
     const submitBtn = document.getElementById('submitBtn');
-    serviceForm.addEventListener('submit', function (e) {
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = 'Submitting...';
-    });
+    if (serviceForm && submitBtn) {
+        serviceForm.addEventListener('submit', function (e) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = 'Finding Technicians...';
+        });
+    }
+
+    // Handle technician selection form
+    const technicianForm = document.getElementById('technicianForm');
+    const bookBtn = document.getElementById('bookBtn');
+    if (technicianForm && bookBtn) {
+        technicianForm.addEventListener('submit', function (e) {
+            bookBtn.disabled = true;
+            bookBtn.innerHTML = 'Booking Service...';
+        });
+    }
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>

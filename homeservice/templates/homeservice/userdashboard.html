@@ -151,7 +151,7 @@
                                 {% for item in rescheduled_requests %}
                                 <tr>
                                     <td>{{ forloop.counter }}</td>
-                                    <td>{{ item.appliance_name }}</td>
+                                    <td>{{ item.service_type }}</td>
                                     <td>{{ item.address }}</td>
                                     <td>{{ item.preferred_date|date:'d M Y' }} {{ item.preferred_time|time:'h:i A' }}</td>
                                     <td>{% if item.suggested_date and item.suggested_time %}{{ item.suggested_date|date:'d M Y' }} {{ item.suggested_time|time:'h:i A' }}{% else %}-{% endif %}</td>
@@ -172,38 +172,6 @@
                             </tbody>
                         </table>
                     </div>
-                </div>
-            </div>
-            {% endif %}
-
-            <!-- Reassign Requests -->
-            {% if reassign_requests %}
-            <div class="card bg-white mb-4">
-                <div class="card-body">
-                    <h6 class="mb-3">Select a New Technician</h6>
-                    {% for item in reassign_requests %}
-                        <div class="border rounded p-3 mb-2">
-                            <div><strong>Request #{{ item.id }}:</strong> {{ item.appliance_name }} - {{ item.address }}</div>
-                            <form method="post" action="{% url 'user_assign_technician' item.id %}">
-                                {% csrf_token %}
-                                <div class="row g-2 align-items-center mt-2">
-                                    <div class="col-md-6">
-                                        <select name="technician_id" class="form-select form-select-sm" required>
-                                            <option value="">Select technician</option>
-                                            {% for tech in item.eligible_technicians %}
-                                                <option value="{{ tech.id }}">{{ tech.name }} ({{ tech.service_locations }})</option>
-                                            {% empty %}
-                                                <option value="">No eligible technicians</option>
-                                            {% endfor %}
-                                        </select>
-                                    </div>
-                                    <div class="col-auto">
-                                        <button class="btn btn-primary btn-sm">Assign</button>
-                                    </div>
-                                </div>
-                            </form>
-                        </div>
-                    {% endfor %}
                 </div>
             </div>
             {% endif %}
@@ -286,12 +254,18 @@
                                             {% else %}
                                                 <small class="text-muted">No technician assigned</small>
                                             {% endif %}
+                                        {% elif item.status == 'reschedule_rejected' %}
+                                            <a href="{% url 'reassign_technician' item.id %}" class="btn btn-sm btn-outline-success">Find New Technician</a>
                                         {% else %}
                                             -
                                         {% endif %}
                                     </td>
                                     <td class="align-middle text-end">
-                                        <a href="{% url 'view_invoice' item.id %}" class="btn btn-sm btn-outline-primary">Invoice</a>
+                                        {% if item.status != 'reschedule_rejected' %}
+                                            <a href="{% url 'view_invoice' item.id %}" class="btn btn-sm btn-outline-primary">Invoice</a>
+                                        {% else %}
+                                            <span class="text-muted small">Invoice Disabled</span>
+                                        {% endif %}
                                     </td>
                                 </tr>
                             {% endfor %}

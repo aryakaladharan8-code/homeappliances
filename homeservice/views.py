@@ -7,12 +7,12 @@ from django.conf import settings
 from django.urls import reverse
 from django.views.decorators.csrf import csrf_protect
 from django.views.decorators.cache import never_cache
-from django.db.models import Q, Sum
+from django.db.models import Q, Sum, Avg
 from django.utils.timezone import now
 
 from .models import ServiceRequest, Customer, Technician, Rating, TechnicianPayment
 from .forms import TechnicianSignupForm
-from .utils import get_monthly_scores, update_technician_status, get_final_amount
+from .utils import get_monthly_scores, update_technician_status, get_final_amount, get_site_url
 
 import io
 from reportlab.lib.pagesizes import letter
@@ -290,112 +290,289 @@ def findservice(request):
                 areas_set.add(a)
     areas = sorted(areas_set)
 
+    available_technicians = []
+    selected_area = None
+
     if request.method == "POST":
-        appliance = request.POST.get("appliance_type")
-        problem = request.POST.get("problem")
-        # Prefer area select if chosen, otherwise fallback to location input
-        selected_area = request.POST.get('area', '').strip()
-        address_input = request.POST.get("location")
-        preferred_date_str = request.POST.get("preferred_date")
-        preferred_time_str = request.POST.get("preferred_time")
+        step = request.POST.get('step', '1')  # Step 1: service details, Step 2: technician selection
+        
+        if step == '1':
+            # First step: collect service details and show technicians
+            appliance = request.POST.get("appliance_type")
+            problem = request.POST.get("problem")
+            selected_area = request.POST.get('area', '').strip()
+            address_input = request.POST.get("location")
+            preferred_date_str = request.POST.get("preferred_date")
+            preferred_time_str = request.POST.get("preferred_time")
 
-        # Keep the full address the user typed as the ServiceRequest.address
-        # Use the selected area only for matching (ServiceRequest.location)
-        if selected_area:
-            location_for_matching = selected_area
-        else:
-            location_for_matching = address_input
+            if not selected_area:
+                messages.error(request, "Please select a service area to find available technicians.")
+                return render(request, "homeservice/findservice.html", {"customer": customer, "areas": areas})
 
-        if appliance == "other_appliance":
-            appliance = request.POST.get("other_appliance")
+            # Get available technicians for the selected area
+            from .utils import get_eligible_technicians_for_request
+            eligible_techs = get_eligible_technicians_for_request(selected_area)
+            
+            # Calculate ratings and distance for each technician
+            for tech in eligible_techs:
+                # Calculate average rating
+                avg_rating = Rating.objects.filter(technician=tech).aggregate(avg=Avg('stars'))['avg'] or 0
+                total_ratings = Rating.objects.filter(technician=tech).count()
+                
+                # Calculate completed jobs
+                completed_jobs = ServiceRequest.objects.filter(technician=tech.user, status='completed').count()
+                
+                # Simple distance calculation (for now, just check if area matches exactly)
+                distance = "Nearby" if selected_area.lower() in tech.service_locations.lower() else "Available"
+                
+                available_technicians.append({
+                    'technician': tech,
+                    'avg_rating': round(avg_rating, 1),
+                    'total_ratings': total_ratings,
+                    'completed_jobs': completed_jobs,
+                    'distance': distance
+                })
+            
+            # Sort by rating (highest first), then by completed jobs
+            available_technicians.sort(key=lambda x: (-x['avg_rating'], -x['completed_jobs']))
+            
+            # Store form data in session for step 2
+            request.session['service_data'] = {
+                'appliance': appliance,
+                'problem': problem,
+                'selected_area': selected_area,
+                'address_input': address_input,
+                'preferred_date_str': preferred_date_str,
+                'preferred_time_str': preferred_time_str
+            }
+            
+            return render(request, "homeservice/findservice.html", {
+                "customer": customer, 
+                "areas": areas,
+                "available_technicians": available_technicians,
+                "selected_area": selected_area,
+                "step": 2,
+                "service_data": request.session['service_data']
+            })
+            
+        elif step == '2':
+            # Second step: user selects technician and submits request
+            selected_technician_id = request.POST.get('selected_technician')
+            
+            if not selected_technician_id:
+                messages.error(request, "Please select a technician.")
+                return redirect('findservice')
+            
+            # Get stored service data
+            service_data = request.session.get('service_data')
+            if not service_data:
+                messages.error(request, "Session expired. Please start over.")
+                return redirect('findservice')
+            
+            appliance = service_data['appliance']
+            problem = service_data['problem']
+            selected_area = service_data['selected_area']
+            address_input = service_data['address_input']
+            preferred_date_str = service_data['preferred_date_str']
+            preferred_time_str = service_data['preferred_time_str']
 
-        if problem == "other_problem":
-            problem = request.POST.get("other_problem")
+            # Parse preferred date and time
+            preferred_date = None
+            preferred_time = None
+            if preferred_date_str:
+                from datetime import datetime
+                preferred_date = datetime.strptime(preferred_date_str, '%Y-%m-%d').date()
+            if preferred_time_str:
+                from datetime import datetime
+                preferred_time = datetime.strptime(preferred_time_str, '%H:%M').time()
 
-        # Parse preferred date and time
-        preferred_date = None
-        preferred_time = None
-        if preferred_date_str:
-            from datetime import datetime
-            preferred_date = datetime.strptime(preferred_date_str, '%Y-%m-%d').date()
-        if preferred_time_str:
-            from datetime import datetime
-            preferred_time = datetime.strptime(preferred_time_str, '%H:%M').time()
+            # Get the selected technician
+            try:
+                selected_technician = Technician.objects.get(id=selected_technician_id, is_active=True, is_approved=True)
+            except Technician.DoesNotExist:
+                messages.error(request, "Selected technician is not available.")
+                return redirect('findservice')
 
-        # Defensive check: prevent near-duplicate submissions (e.g., double clicks)
-        from datetime import timedelta
-        recent_cutoff = now() - timedelta(minutes=1)
-        if ServiceRequest.objects.filter(
-            user=request.user,
-            service_type=appliance.strip() if isinstance(appliance, str) else appliance,
-            problem_description=problem.strip() if isinstance(problem, str) else problem,
-            address=(address_input.strip() if isinstance(address_input, str) else address_input),
-            created_at__gte=recent_cutoff
-        ).exclude(status__iexact="completed").exists():
+            # Handle "other" options
+            if appliance == "other_appliance":
+                appliance = request.POST.get("other_appliance")
+            if problem == "other_problem":
+                problem = request.POST.get("other_problem")
 
-            logger.info("Duplicate service request prevented for user %s: %s / %s / %s", request.user.id, appliance, problem, address_input)
-            messages.warning(request, "We already received a similar request. Please wait for a technician to respond.")
+            # Defensive check: prevent near-duplicate submissions
+            from datetime import timedelta
+            recent_cutoff = now() - timedelta(minutes=1)
+            if ServiceRequest.objects.filter(
+                user=request.user,
+                service_type=appliance.strip() if isinstance(appliance, str) else appliance,
+                problem_description=problem.strip() if isinstance(problem, str) else problem,
+                address=(address_input.strip() if isinstance(address_input, str) else address_input),
+                created_at__gte=recent_cutoff
+            ).exclude(status__iexact="completed").exists():
+                logger.info("Duplicate service request prevented for user %s: %s / %s / %s", request.user.id, appliance, problem, address_input)
+                messages.warning(request, "We already received a similar request. Please wait for a technician to respond.")
+                return redirect("dashboard")
+
+            # Create service request with selected technician
+            job = ServiceRequest.objects.create(
+                user=request.user,
+                technician=selected_technician.user,
+                service_type=appliance,
+                problem_description=problem,
+                address=address_input,
+                location=selected_area,
+                preferred_date=preferred_date,
+                preferred_time=preferred_time,
+                status="pending",  # Awaiting technician review
+            )
+            logger.info("Created ServiceRequest %s for user %s assigned to technician %s", job.id, request.user.id, selected_technician.name)
+
+            # Clear session data
+            if 'service_data' in request.session:
+                del request.session['service_data']
+
+            # Send notification to the selected technician
+            site_url = getattr(settings, "SITE_URL", None)
+            if site_url:
+                site_url = site_url.rstrip("/")
+            else:
+                site_url = request.build_absolute_uri("/").rstrip("/")
+
+            login_url = f"{site_url}{reverse('login')}"
+            accept_link = f"{site_url}{reverse('accept_job', args=[job.id])}"
+            link = f"{login_url}?next={accept_link}"
+
+            customer_name = request.user.get_full_name() or request.user.username
+            customer_phone = customer.phone or "(not provided)"
+
+            email_body = (
+                f"New service request for review (Job #{job.id})!\n\n"
+                f"A customer has selected you to handle their service request.\n\n"
+                f"Service: {job.service_type}\n"
+                f"Problem: {job.problem_description}\n"
+                f"Address: {job.address}\n"
+                f"Preferred Date: {job.preferred_date.strftime('%d %B %Y') if job.preferred_date else 'Not specified'}\n"
+                f"Preferred Time: {job.preferred_time.strftime('%I:%M %p') if job.preferred_time else 'Not specified'}\n"
+                f"Customer: {customer_name}\n"
+                f"Customer phone: {customer_phone}\n\n"
+                f"You can:\n"
+                f"1. Accept this request with the preferred date and time\n"
+                f"2. Suggest a different date and time\n\n"
+                f"Open the technician portal to review:\n{link}\n"
+            )
+
+            send_mail(
+                "New Service Request - Pending Your Review",
+                email_body,
+                settings.DEFAULT_FROM_EMAIL,
+                [selected_technician.email],
+                fail_silently=True,
+            )
+
+            messages.success(request, f"Service request submitted successfully! {selected_technician.name} has been notified and will review your request.")
             return redirect("dashboard")
 
-        job = ServiceRequest.objects.create(
-            user=request.user,
-            service_type=appliance,
-            problem_description=problem,
-            address=address_input,
-            location=location_for_matching,  # Add selected area (or address) for technician matching
-            preferred_date=preferred_date,
-            preferred_time=preferred_time,
-            status="open",  # immediately open so technicians may be notified
-        )
-        logger.info("Created ServiceRequest %s for user %s: %s / %s / %s", job.id, request.user.id, appliance, problem, address_input)
-
-        # notify eligible technicians right away (replacement for admin "send" step)
-        from .utils import get_eligible_technicians_for_request
-        eligible_technicians = get_eligible_technicians_for_request(job.location)
-
-        # Use the configured SITE_URL for emails (falls back to request build if missing)
-        site_url = getattr(settings, "SITE_URL", None)
-        if site_url:
-            site_url = site_url.rstrip("/")
-        else:
-            site_url = request.build_absolute_uri("/").rstrip("/")
-
-        login_url = f"{site_url}{reverse('login')}"
-        for tech in eligible_technicians:
-            try:
-                # build a link that directs technician to accept the specific job
-                accept_link = f"{site_url}{reverse('accept_job', args=[job.id])}"
-                # ensure login page redirects after authentication
-                link = f"{login_url}?next={accept_link}"
-
-                # Compose a detailed notification with a single actionable link
-                customer_name = request.user.get_full_name() or request.user.username
-                customer_phone = customer.phone or "(not provided)"
-
-                email_body = (
-                    f"New service request (Job #{job.id}) is available.\n\n"
-                    f"Service: {job.service_type}\n"
-                    f"Problem: {job.problem_description}\n"
-                    f"Address: {job.address}\n"
-                    f"Customer: {customer_name}\n"
-                    f"Customer phone: {customer_phone}\n\n"
-                    f"Open the technician portal to accept the job:\n{link}\n"
-                )
-
-                send_mail(
-                    "New Service Job Available",
-                    email_body,
-                    settings.DEFAULT_FROM_EMAIL,
-                    [tech.user.email],
-                    fail_silently=True,
-                )
-            except Exception:
-                logger.exception("Failed to send notification for ServiceRequest %s to technician %s", job.id, tech.id)
-
-        messages.success(request, "Service request submitted successfully! Technicians have been notified.")
-        return redirect("dashboard")
-
     return render(request, "homeservice/findservice.html", {"customer": customer, "areas": areas})
+
+
+@login_required
+def reassign_technician(request, request_id):
+    # Prevent technicians from accessing reassign_technician
+    if Technician.objects.filter(user=request.user).exists():
+        return redirect('techniciandashboard')
+    
+    # Get the service request that needs reassignment
+    service_request = get_object_or_404(
+        ServiceRequest,
+        id=request_id,
+        user=request.user,
+        status='reschedule_rejected'
+    )
+    
+    customer = Customer.objects.get(user=request.user)
+    
+    available_technicians = []
+    
+    if request.method == "POST":
+        selected_technician_id = request.POST.get('selected_technician')
+        
+        if not selected_technician_id:
+            messages.error(request, "Please select a technician.")
+            return redirect('reassign_technician', request_id=request_id)
+        
+        # Get the selected technician
+        try:
+            selected_technician = Technician.objects.get(id=selected_technician_id, is_active=True, is_approved=True)
+        except Technician.DoesNotExist:
+            messages.error(request, "Selected technician is not available.")
+            return redirect('reassign_technician', request_id=request_id)
+        
+        # Verify eligibility by location
+        from .utils import get_eligible_technicians_for_request
+        eligible_techs = get_eligible_technicians_for_request(service_request.location)
+        if selected_technician not in eligible_techs:
+            messages.error(request, 'Selected technician is not eligible at this location.')
+            return redirect('reassign_technician', request_id=request_id)
+        
+        # Update the service request with new technician
+        service_request.technician = selected_technician.user
+        service_request.status = 'pending'
+        service_request.suggested_date = None
+        service_request.suggested_time = None
+        service_request.save()
+        
+        # Send notification to the selected technician
+        site_url = get_site_url(request)
+        tech_login = f"{site_url}{reverse('technicianlogin')}"
+        send_mail(
+            'New Service Request Assigned',
+            (
+                f"Hello {selected_technician.name},\n\n"
+                f"A customer has selected you for service request #{service_request.id}.\n"
+                f"Preferred date: {service_request.preferred_date.strftime('%d %B %Y')}\n"
+                f"Preferred time: {service_request.preferred_time.strftime('%I:%M %p')}\n\n"
+                f"Please respond from your dashboard: {tech_login}\n"
+            ),
+            settings.DEFAULT_FROM_EMAIL,
+            [selected_technician.user.email],
+            fail_silently=True,
+        )
+        
+        messages.success(request, f'Technician selection submitted. {selected_technician.name} has been notified and will review your request.')
+        return redirect('dashboard')
+    
+    # Get available technicians for this request's location
+    from .utils import get_eligible_technicians_for_request
+    eligible_techs = get_eligible_technicians_for_request(service_request.location)
+    
+    # Calculate ratings and distance for each technician
+    for tech in eligible_techs:
+        # Calculate average rating
+        avg_rating = Rating.objects.filter(technician=tech).aggregate(avg=Avg('stars'))['avg'] or 0
+        total_ratings = Rating.objects.filter(technician=tech).count()
+        
+        # Calculate completed jobs
+        completed_jobs = ServiceRequest.objects.filter(technician=tech.user, status='completed').count()
+        
+        # Simple distance calculation (for now, just check if area matches exactly)
+        distance = "Nearby" if service_request.location.lower() in tech.service_locations.lower() else "Available"
+        
+        available_technicians.append({
+            'technician': tech,
+            'avg_rating': round(avg_rating, 1),
+            'total_ratings': total_ratings,
+            'completed_jobs': completed_jobs,
+            'distance': distance
+        })
+    
+    # Sort by rating (highest first), then by completed jobs
+    available_technicians.sort(key=lambda x: (-x['avg_rating'], -x['completed_jobs']))
+    
+    return render(request, "homeservice/reassign_technician.html", {
+        "customer": customer,
+        "service_request": service_request,
+        "available_technicians": available_technicians,
+    })
 
 
 # ---------------- PROFILE ----------------
@@ -1615,6 +1792,11 @@ def logout_ajax(request):
 @login_required
 def view_invoice(request, request_id):
     service_request = get_object_or_404(ServiceRequest, id=request_id, user=request.user)
+    
+    # Don't allow viewing invoices for reschedule rejected requests
+    if service_request.status == 'reschedule_rejected':
+        messages.error(request, "Invoice is not available for reschedule rejected requests.")
+        return redirect('dashboard')
     
     context = {
         'service_request': service_request,

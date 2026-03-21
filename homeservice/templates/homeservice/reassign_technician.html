@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Reassign Technician - {{ service_request.id }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    {% include 'homeservice/_dashboard_styles.html' %}
+    <style>
+        .sidebar {
+    min-height: 100vh;
+    background: #f7f7f8;   /* deep navy */
+    border-right: 1px solid rgba(255,255,255,0.08);
+    padding-top: 30px;
+}
+
+        .brand { font-size:22px; font-weight:700; color:#2d347d; }
+        .menu a { font-weight:500; color:#556179; padding:8px 0; }
+        .menu a.active { color:#2d347d; font-weight:700; }
+        .card-box { border-radius:12px; box-shadow:0 6px 20px rgba(47,63,88,0.06); transition:.2s; }
+        .card-box:hover { transform: translateY(-4px); box-shadow:0 10px 30px rgba(47,63,88,0.08); }
+        .muted { color:#727b90; }
+        .profile-card { border-radius:12px; padding:18px; display:flex; gap:12px; align-items:center; background:linear-gradient(90deg,#ffffff,#fbfcff); }
+        .profile-avatar { width:64px;height:64px;border-radius:12px;object-fit:cover;box-shadow:0 3px 10px rgba(39,52,68,0.08); display:inline-flex; align-items:center; justify-content:center; }
+        .total-badge { display:inline-block; padding:6px 12px; border-radius:999px; background:linear-gradient(90deg,#3b6be0,#2d347d); color:#fff; font-weight:700; font-size:13px; margin-left:8px; }
+        .stat-card { border-radius:12px; padding:18px; color:#fff; }
+        .stat-card .label { font-size:13px; opacity:0.95; }
+        .side-item { display:block; padding:10px 14px; border-radius:10px; background:#ffffff; color:#556179; border:1px solid #eef2f8; font-weight:600; position:relative; transition: all .18s ease; }
+        .side-item svg { width:18px; height:18px; margin-right:8px; vertical-align:middle; fill:currentColor; opacity:0.9; }
+        .side-item::before { content:""; position:absolute; left:8px; top:50%; transform:translateY(-50%); width:0; height:36px; background:linear-gradient(180deg,#3b6be0,#2d347d); border-radius:8px; transition: width .18s ease; }
+        .side-item:hover, .side-item.active { background:linear-gradient(90deg,#f1f5ff,#c7d8ff); color:#2d347d; text-decoration:none; box-shadow:0 6px 20px rgba(47,63,88,0.04); transform:translateY(-2px); }
+        .side-item:hover::before, .side-item.active::before { width:4px; }
+        .side-item:hover svg, .side-item.active svg { color:#2d347d; opacity:1; }
+        .stat-card .value { font-size:22px; font-weight:700; margin-top:6px; }
+        .stat-primary { background: linear-gradient(135deg,#2d347d,#3b6be0); }
+        .stat-warning { background: linear-gradient(135deg,#f6c84c,#ff9f1c); }
+        .stat-success { background: linear-gradient(135deg,#2ecc71,#28a745); }
+        .quick-actions .btn { margin-right:8px; }
+        .table tbody tr:hover { background:#fbfcff; transform: translateY(-1px); }
+        .tech-avatar { width:40px;height:40px;border-radius:8px;object-fit:cover; }
+        .empty-illustration { width:120px; opacity:0.9; }
+        @media (max-width:767px) {
+            .sidebar { display:none; }
+            .profile-avatar { width:48px;height:48px; }
+        }
+    </style>
+</head>
+
+<body>
+<div class="container-fluid">
+    <div class="row">
+
+        <!-- Sidebar -->
+        <aside class="col-md-3 col-lg-2 sidebar p-4">
+            <div class="d-flex align-items-center gap-2 mb-4">
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="#2d347d">
+                    <rect width="24" height="24" rx="6"/><path d="M7 12h10M7 8h10M7 16h6" stroke="white" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span class="brand">HomeFix Pro</span>
+            </div>
+
+            <div class="d-grid gap-2">
+                <a href="/dashboard/" class="side-item text-decoration-none"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M3 11.5L12 4l9 7.5v7A1.5 1.5 0 0 1 19.5 20h-15A1.5 1.5 0 0 1 3 18.5v-7z"></path></svg>Dashboard</a>
+                <a href="/profile/" class="side-item text-decoration-none"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0 2c-4.418 0-8 2.015-8 4.5V21h16v-2.5c0-2.485-3.582-4.5-8-4.5z"></path></svg>Profile / Settings</a>
+                <a href="/findservice/" class="side-item text-decoration-none"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M21 21l-4.35-4.35M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15z"></path></svg>Find a Service</a>
+                <a href="/recentservices/" class="side-item text-decoration-none"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M3 6h18M3 12h18M3 18h18"></path></svg>Recent Services</a>
+                <a href="#" class="side-item text-decoration-none text-danger logout-trigger"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M16 17l5-5-5-5M21 12H9"></path></svg>Logout</a>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="col-md-9 col-lg-10 p-4">
+            <div class="row justify-content-center">
+                <div class="col-lg-8 col-md-10 col-12">
+                    <div class="box dashboard-card">
+                        <h4 class="mb-3">Find a New Technician</h4>
+                        <p class="text-muted mb-4">Your previous technician rejected the reschedule request. Choose a new technician for your service request.</p>
+
+                        <!-- Service Request Details -->
+                        <div class="alert alert-info mb-4">
+                            <h6>Service Request Details</h6>
+                            <strong>Request #{{ service_request.id }}</strong><br>
+                            <strong>Service:</strong> {{ service_request.service_type }}<br>
+                            <strong>Problem:</strong> {{ service_request.problem_description }}<br>
+                            <strong>Address:</strong> {{ service_request.address }}<br>
+                            <strong>Preferred Date:</strong> {{ service_request.preferred_date|date:"M d, Y" }}<br>
+                            <strong>Preferred Time:</strong> {{ service_request.preferred_time|time:"g:i A" }}
+                        </div>
+
+                        {% if available_technicians %}
+                            <form method="POST" id="technicianForm">
+                                {% csrf_token %}
+
+                                {% for tech_data in available_technicians %}
+                                <div class="technician-card mb-3 p-3 border rounded">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="selected_technician" value="{{ tech_data.technician.id }}" id="tech_{{ tech_data.technician.id }}" required>
+                                        <label class="form-check-label w-100" for="tech_{{ tech_data.technician.id }}">
+                                            <div class="d-flex justify-content-between align-items-start">
+                                                <div>
+                                                    <strong>{{ tech_data.technician.name }}</strong>
+                                                    <div class="text-muted small">
+                                                        {% if tech_data.technician.skill %}
+                                                            <span class="badge bg-primary">{{ tech_data.technician.skill }}</span>
+                                                        {% endif %}
+                                                        {% if tech_data.technician.experience_years %}
+                                                            <span class="badge bg-secondary">{{ tech_data.technician.experience_years }} years exp.</span>
+                                                        {% endif %}
+                                                    </div>
+                                                    <div class="mt-1">
+                                                        <span class="text-warning">
+                                                            {% for i in "12345" %}
+                                                                {% if tech_data.avg_rating >= forloop.counter %}
+                                                                    ★
+                                                                {% else %}
+                                                                    ☆
+                                                                {% endif %}
+                                                            {% endfor %}
+                                                        </span>
+                                                        <small class="text-muted">({{ tech_data.avg_rating|floatformat:1 }} stars from {{ tech_data.total_ratings }} reviews)</small>
+                                                    </div>
+                                                    <div class="mt-1">
+                                                        <small class="text-muted">
+                                                            Distance: {{ tech_data.distance }} • {{ tech_data.completed_jobs }} completed jobs
+                                                        </small>
+                                                    </div>
+                                                </div>
+                                                <div class="text-end">
+                                                    {% if tech_data.technician.photo %}
+                                                        <img src="{{ tech_data.technician.photo.url }}" alt="Technician photo" class="rounded-circle" style="width: 60px; height: 60px; object-fit: cover;">
+                                                    {% else %}
+                                                        <div class="bg-light rounded-circle d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                                                            <svg width="30" height="30" viewBox="0 0 24 24" fill="#6c757d">
+                                                                <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0 2c-4.418 0-8 2.015-8 4.5V21h16v-2.5c0-2.485-3.582-4.5-8-4.5z"/>
+                                                            </svg>
+                                                        </div>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+                                {% empty %}
+                                <div class="alert alert-warning">
+                                    <h5>No technicians available</h5>
+                                    <p>Sorry, no other technicians are currently available in your area. Please try again later or contact support.</p>
+                                </div>
+                                {% endfor %}
+
+                                {% if available_technicians %}
+                                <div class="text-center mt-4">
+                                    <button type="submit" id="assignBtn" class="btn btn-success px-4">Assign Selected Technician</button>
+                                    <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary px-4">Back to Dashboard</a>
+                                </div>
+                                {% endif %}
+                            </form>
+                        {% else %}
+                            <div class="alert alert-warning">
+                                <h5>No technicians available</h5>
+                                <p>Sorry, no technicians are currently available in your area. Please try again later or contact support.</p>
+                                <div class="text-center mt-3">
+                                    <a href="{% url 'dashboard' %}" class="btn btn-primary">Back to Dashboard</a>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // Logout functionality
+    document.querySelectorAll('.logout-trigger').forEach(function(element) {
+        element.addEventListener('click', function(e) {
+            e.preventDefault();
+            if (confirm('Are you sure you want to logout?')) {
+                window.location.href = '/logout/';
+            }
+        });
+    });
+</script>
+</body>
+</html>

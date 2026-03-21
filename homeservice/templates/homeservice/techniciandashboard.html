@@ -124,10 +124,17 @@
                             <td>{{ forloop.counter }}</td>
                             <td>{{ job.user.first_name|default:job.user.username }}</td>
                             <td>{{ job.user.customer.phone|default:"N/A" }}</td>
-                            <td>{{ job.appliance_name }}</td>
+                            <td>{{ job.service_type }}</td>
                             <td>{{ job.problem_description|truncatewords:8 }}</td>
                             <td>{{ job.address }}</td>
-                            <td>{{ job.preferred_date|date:'d M Y' }} {{ job.preferred_time|time:'h:i A' }}</td>
+                            <td>
+                                {% if job.preferred_date %}
+                                    {{ job.preferred_date|date:'d M Y' }}<br>
+                                    <small class="text-muted">{{ job.preferred_time|time:'h:i A' }}</small>
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </td>
                             <td>
                                 <form method="post" class="d-inline">
                                     {% csrf_token %}
@@ -244,8 +251,74 @@
             </div>
             {% endif %}
 
-            {% if technician.is_active %}
-            <!-- Jobs Table -->
+            {% if pending_jobs %}
+            <!-- Pending Jobs Section -->
+            <div class="card-box mt-4">
+                <h5 class="mb-3">Pending Jobs (Awaiting Confirmation)</h5>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Customer</th>
+                            <th>Phone</th>
+                            <th>Service</th>
+                            <th>Problem</th>
+                            <th>Address</th>
+                            <th>Preferred Date</th>
+                            <th>Preferred Time</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for job in pending_jobs %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>{{ job.user.first_name }}</td>
+                            <td>{{ job.user.customer.phone|default:"N/A" }}</td>
+                            <td>{{ job.service_type }}</td>
+                            <td>{{ job.problem_description }}</td>
+                            <td>{{ job.address }}</td>
+                            <td>{{ job.preferred_date|date:"M d, Y" }}</td>
+                            <td>{{ job.preferred_time|time:"H:i" }}</td>
+                            <td><span class="badge-status bg-info">Pending</span></td>
+                            <td>
+                                <form method="post" class="d-inline">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="job_id" value="{{ job.id }}" />
+                                    <input type="hidden" name="action" value="accept" />
+                                    <button class="btn btn-success btn-sm">Confirm</button>
+                                </form>
+                                <button class="btn btn-warning btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#reschedulePending{{ job.id }}" aria-expanded="false" aria-controls="reschedulePending{{ job.id }}">
+                                    Suggest Reschedule
+                                </button>
+                                <div class="collapse mt-2" id="reschedulePending{{ job.id }}">
+                                    <form method="post" class="row g-2">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="job_id" value="{{ job.id }}" />
+                                        <input type="hidden" name="action" value="reschedule" />
+                                        <div class="col-auto">
+                                            <input type="date" name="suggested_date" class="form-control form-control-sm" required>
+                                        </div>
+                                        <div class="col-auto">
+                                            <input type="time" name="suggested_time" class="form-control form-control-sm" required>
+                                        </div>
+                                        <div class="col-auto">
+                                            <button class="btn btn-primary btn-sm" type="submit">Send</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Assigned/Active Jobs Section - Always Visible -->
             <div class="card-box mt-4">
                 <h5 class="mb-3">Assigned Jobs</h5>
 
@@ -260,6 +333,8 @@
                             <th>Service</th>
                             <th>Problem</th>
                             <th>Address</th>
+                            <th>Preferred Date</th>
+                            <th>Preferred Time</th>
                             <th>Status</th>
                             <th>Amount</th>
                             <th>Action</th>
@@ -275,12 +350,28 @@
                             <td>{{ job.service_type }}</td>
                             <td>{{ job.problem_description }}</td>
                             <td>{{ job.address }}</td>
+                            <td>
+                                {% if job.preferred_date %}
+                                    {{ job.preferred_date|date:'d M Y' }}
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if job.preferred_time %}
+                                    {{ job.preferred_time|time:'h:i A' }}
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </td>
 
                             <td>
                                 {% if job.status == "assigned" %}
                                 <span class="badge-status bg-warning text-dark">Assigned</span>
                                 {% elif job.status == "completed" %}
                                 <span class="badge-status bg-success">Completed</span>
+                                {% else %}
+                                <span class="badge-status bg-secondary">{{ job.get_status_display }}</span>
                                 {% endif %}
                             </td>
                             <td>
@@ -309,7 +400,6 @@
                 <p class="text-muted">No jobs assigned yet.</p>
                 {% endif %}
             </div>
-            {% endif %}
 
         </div>
     </div>

@@ -144,3 +144,14 @@ def send_sms(phone, message):
         from_="+16562695997",
         to=phone
     )
+
+
+def get_site_url(request):
+    """Get the site URL from settings or build from request"""
+    from django.conf import settings
+    site_url = getattr(settings, "SITE_URL", None)
+    if site_url:
+        site_url = site_url.rstrip("/")
+    else:
+        site_url = request.build_absolute_uri("/").rstrip("/")
+    return site_url
